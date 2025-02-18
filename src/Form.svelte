@@ -8,15 +8,29 @@ let {
 	preOnChange,
 	onChange,
 	title,
-	inputProps,
 	initialValues,
 	onError,
 	onValid,
 	onHide,
-	customSpacing = true,
-	getValidationSpec,
-	validationLevel
-} = $props();
+	customSpacing = true
+}: Props = $props();
+
+type Event = (index: string, value: string, allValues: Record<string, string>) => void;
+
+interface Props {
+	invalidBG: string;
+	onJSError: (e: Error) => void;
+	getRenderedItems: (components: ProvidedComponents, methods: ProvidedMethods) => Block[];
+	onChange: (
+		allValid: Record<string, string>,
+		lastInputInfo: { index: string; value: string; focused: boolean },
+		methods: ProvidedMethods
+	) => void;
+	initialValues: Record<string, string>;
+	onError: Event;
+	onValid: Event;
+	onHide: Event;
+}
 
 function handleValidationResponse(res, currentValue = '') {
 	const isValid = res.valid;
@@ -33,55 +47,94 @@ const defaultInputProps = {
 	cls: 'w-52 border h-8 rounded font-mono px-2'
 };
 
+type DataToAssign = string;
+type TooltipMessage = string;
+type Validate = (
+	value: string,
+	focused: boolean
+) => { valid: true; data: DataToAssign } | { valid: false; data: TooltipMessage };
+
+type AdditionalProps = {};
+
+type Block = { spec: string };
+type SelectOptions = Record<string, string>;
+
+type StandardInput = (index: string, validate: Validate, props: AdditionalProps) => Block;
+type OptionInput = (
+	index: string,
+	validate: Validate,
+	options: SelectOptions,
+	props: AdditionalProps
+) => Block;
+
+type Match = (value: string, block: Block) => (index: string) => Block;
+
+type Pivot = (index: string, ...Match: ReturnType<Match>[]) => Block;
+
+type Group = (...blocks: Block[]) => Block;
+
 const components = ['Text', 'Select', 'Date', 'InlineSelect', 'Col', 'Row', 'Boolean'];
+export type ProvidedComponents = {
+	Text: StandardInput;
+	Select: OptionInput;
+	Date: StandardInput;
+	InlineSelect: OptionInput;
+	Col: Block;
+	Row: Block;
+	Pivot: Pivot;
+	Match: Match;
+};
+type ProvidedMethods = {
+	setInternalValue: (index: string, valid: string) => void;
+	setDisabled: (index: string, state: boolean) => void;
+};
 
 let pivots = $state({});
 let allValues = $state(initialValues || {});
-let allProps = $state();
 let renderedComponents = $state([]);
 
+const match: Match = (value, block) => {
+	let blocks: Block[] = !Array.isArray(block) ? [block] : block;
+	let includesBool = false;
+	let values: string[] = !Array.isArray(value) ? [value] : value;
+	if (values.some((e) => typeof e === 'boolean')) includesBool = true;
+	const uid = values.join('');
+	return (valueIndex: string) => {
+		pivots[valueIndex] ??= {};
+		pivots[valueIndex][uid] = block;
+		if (
+			(includesBool && Boolean(allValues[valueIndex])) ||
+			values
+				.slice()
+				.map((e) => e.toString().toLowerCase())
+				.includes(allValues[valueIndex]?.toString()?.toLowerCase())
+		) {
+			return blocks;
+		}
+
+		const allBlocks = blocks
+			.flat()
+			.map((e) => collectBlocks(e))
+			.flat()
+			.filter((e) => e);
+		allBlocks.forEach((b) => onHide(b.props.index));
+	};
+};
+
+const pivot: Pivot = (valueIndex, ...matches) => {
+	pivots[valueIndex] = {};
+	const res = matches
+		.map((e) => e(valueIndex))
+		.filter((e) => e)
+		.flat();
+
+	const flatten = (items) => (items.every((e) => e.renderType) ? items : flatten(items.flat()));
+	return flatten(res);
+};
+
 const buildTimeComponents = {
-	Pivot: (valueIndex, ...matches) => {
-		pivots[valueIndex] = {};
-		const res = matches
-			.map((e) => e(valueIndex))
-			.filter((e) => e)
-			.flat();
-
-		const flatten = (items) => (items.every((e) => e.renderType) ? items : flatten(items.flat()));
-		return flatten(res);
-	},
-	Match: (value, block) => {
-		if (!Array.isArray(block)) block = [block];
-		let includesBool = false;
-		if (!Array.isArray(value)) value = [value];
-		if (value.some((e) => typeof e === 'boolean')) includesBool = true;
-		console.log(value);
-
-		const uid = value.join('');
-		return (valueIndex) => {
-			pivots[valueIndex] ??= {};
-			pivots[valueIndex][uid] = block;
-			console.log(allValues[valueIndex], includesBool);
-			if (
-				(includesBool && Boolean(allValues[valueIndex])) ||
-				value
-					.slice()
-					.map((e) => e.toString().toLowerCase())
-					.includes(allValues[valueIndex]?.toString()?.toLowerCase())
-			) {
-				console.log('aaa', block);
-				return block;
-			}
-
-			const allBlocks = block
-				.flat()
-				.map((e) => collectBlocks(e))
-				.flat()
-				.filter((e) => e);
-			allBlocks.forEach((b) => onHide(b.props.index));
-		};
-	}
+	Pivot: pivot,
+	Match: match
 };
 
 const isGroup = (type: string) => ['Col', 'Row'].includes(type);
@@ -97,18 +150,15 @@ async function render() {
 }
 
 function setup() {
-	allProps = inputProps;
-	// getComponents = createConfigOnMount((props) => {
-	// 	allProps = props;
-	// });
 	getComponents = getRenderedItems;
 	wrappedComponents = Object.assign(
 		buildTimeComponents,
 		Object.fromEntries(
 			components.map((type) => {
-				const block = (index, ...args) => {
+				const block: Input & OptionInput = (index, validate, ...args) => {
+					const props = args.slice(-1)[0];
 					index = index.toLowerCase();
-					const oc = (value, focused) => inputChanged(index, value, focused);
+					const oc = (value, focused) => inputChanged(index, value, focused, validate, props);
 					const res = {
 						renderType: 'block',
 						component: Input,
@@ -119,7 +169,8 @@ function setup() {
 							valueChanged: oc,
 							inputType: type.toLowerCase(),
 							...defaultInputProps,
-							...allProps[index]
+							...props
+							///...allProps[index]
 						}
 					};
 					return res;
@@ -153,58 +204,36 @@ function collectBlocks(obj, allBlocks = []) {
 	}
 }
 
-function createValidationParams(index, value, focused, props, vl) {
-	return [value, focused];
-	return [
-		{
-			add_accent: !focused,
-			value,
-			metadata: props
-		},
-		getValidationSpec(vl)
-	];
-}
-
-function inputChanged(index, value, focused) {
-	const readonly = allProps[index].readonly;
+function inputChanged(index, value, focused, validate: Validate, props) {
+	const readonly = props?.readonly;
 	try {
 		index = index.toLowerCase();
 		const valid = { valid: true, data: value };
-		let [exp, relevant] = [valid, valid];
+		let validationRes = valid;
 		if (!readonly) {
-			const validate = allProps[index].validate;
-			console.log(validate);
-			exp = validate(...createValidationParams(index, value, focused, allProps[index], 'export'));
-			console.log(exp);
-			relevant =
-				validationLevel !== 'export'
-					? validate(
-							...createValidationParams(index, value, focused, allProps[index], validationLevel)
-						)
-					: exp;
-
-			if (preOnChange) {
-				const { exportRes, relevantRes } = preOnChange({ index, value, exp, relevant });
-				exp = exportRes;
-				relevant = relevantRes;
-			}
+			validationRes = validate(value, focused);
+			// if (preOnChange) {
+			// 	const { exportRes, relevantRes } = preOnChange({ index, value, exp, relevant });
+			// 	exp = exportRes;
+			// 	relevant = relevantRes;
+			// }
 		}
 
-		const rawValidationResponse = exp;
-		const convertedResponse = handleValidationResponse(rawValidationResponse, value);
+		const convertedResponse = handleValidationResponse(validationRes, value);
+
 		allValues[index] = convertedResponse.value;
 
-		const eventToRun = rawValidationResponse.valid ? onValid : onError;
-		!readonly && eventToRun(index, rawValidationResponse.data, allValues);
+		const eventToRun = validationRes.valid ? onValid : onError;
+
+		!readonly && eventToRun(index, validationRes.data, allValues);
 
 		onChange(
-			allValues,
+			$state.snapshot(allValues),
 			{ index, value: convertedResponse.value, focused },
 			{ setInternalValue, setDisabled }
 		);
 		render();
-		console.log(relevant, value, 'aa');
-		return handleValidationResponse(relevant, value);
+		return handleValidationResponse(validationRes, value);
 	} catch (e) {
 		console.error(e);
 		onJSError?.(e);
@@ -270,7 +299,7 @@ function indexToHeader(s) {
 	<div in:scale={{ duration: 100, opacity: 0.98, start: 0.98 }} class="flex text-sm flex-row py-2">
 		<label
 			for={props.inputType}
-			class="min-w-36 lg:min-w-44 pr-4 text-lg xl:text-2xl text-wrap font-medium h-min my-auto"
+			class="min-w-36 lg:min-w-44 pr-4 text-lg xl:text-2xl text-wrap font-medium h-min /my-auto"
 		>
 			{indexToHeader(props?.index || '')}:
 		</label>
@@ -287,7 +316,6 @@ function indexToHeader(s) {
 {#snippet Group(type, blocks)}
 	<div class:border-t={customSpacing} class:flex-col={type === 'Col'} class="flex">
 		{#each blocks as block, i (i)}
-			<p class="p-4"></p>
 			{#if block}
 				{#if block.renderType === 'block'}
 					{#key forceRerender[block.props.index]}
