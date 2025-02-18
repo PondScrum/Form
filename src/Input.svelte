@@ -256,7 +256,7 @@ const niceHTML = (c) => c && `<h1 class="text-lg capitalize py-1 tracking-tight"
 		<!-- 		{events} -->
 		<!-- 	></Textarea> -->
 	{:else if inputType === 'boolean'}
-		<div class="w-auto h-full">
+		<div class="h-full w-auto">
 			<input
 				use:mounted
 				onclick={(e) => {
@@ -274,7 +274,7 @@ const niceHTML = (c) => c && `<h1 class="text-lg capitalize py-1 tracking-tight"
 				}}
 				{id}
 				tabindex={disabled ? -1 : tabindex}
-				class="w-7 h-7 accent-blue-500 outline-none"
+				class="h-7 w-7 accent-blue-500 outline-none"
 				type="checkbox"
 			/>
 		</div>
@@ -295,7 +295,7 @@ const niceHTML = (c) => c && `<h1 class="text-lg capitalize py-1 tracking-tight"
 			<div
 				class="border {chosenBackgroundColor === 'bg-red-500'
 					? 'text-white hover:*:bg-red-600  '
-					: ' transition-colors duration-150'} {chosenBackgroundColor} border-gray-500 w-full h-7 lg:h-8 text-base divide-x divide-zinc-500 flex justify-end rounded overflow-hidden"
+					: ' transition-colors duration-150'} {chosenBackgroundColor} flex h-7 w-full justify-end divide-x divide-zinc-500 overflow-hidden rounded border-gray-500 text-base lg:h-8"
 			>
 				{#each Object.entries(options) as [choice, displayChoice], i}
 					<button
@@ -315,7 +315,7 @@ const niceHTML = (c) => c && `<h1 class="text-lg capitalize py-1 tracking-tight"
 						<!-- <p>{indexToHeader(tooltipType ? choice : displayChoice)}</p> -->
 						{#key lastSelectVal != choice}
 							<p
-								class="h-min my-auto"
+								class="my-auto h-min"
 								use:singleton_tooltip={() => ({
 									id: choice,
 									content: tooltipType && niceHTML(displayChoice)
@@ -332,7 +332,7 @@ const niceHTML = (c) => c && `<h1 class="text-lg capitalize py-1 tracking-tight"
 		</div>
 	{:else if readonly}
 		<div class="flex {cls} px-1">
-			<p class="select-all text-lg font-mono h-min w-full my-auto">
+			<p class="my-auto h-min w-full font-mono text-lg select-all">
 				{initialValue}
 			</p>
 		</div>

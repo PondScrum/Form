@@ -1,6 +1,21 @@
 <script lang="ts">
 import { onMount, tick } from 'svelte';
 import { scale } from 'svelte/transition';
+
+interface Props {
+	invalidBG: string;
+	onJSError: (e: Error) => void;
+	getRenderedItems: (components: ProvidedComponents, allValues: Record<string, string>) => Block[];
+	onChange: (
+		allValues: Record<string, string>,
+		lastInputInfo: { index: string; value: string; focused: boolean },
+		methods: ProvidedMethods
+	) => void;
+	initialValues: Record<string, string>;
+	onError: Event;
+	onValid: Event;
+	onHide: Event;
+}
 let {
 	invalidBG,
 	onJSError,
@@ -11,26 +26,10 @@ let {
 	initialValues,
 	onError,
 	onValid,
-	onHide,
-	customSpacing = true
+	onHide
 }: Props = $props();
 
 type Event = (index: string, value: string, allValues: Record<string, string>) => void;
-
-interface Props {
-	invalidBG: string;
-	onJSError: (e: Error) => void;
-	getRenderedItems: (components: ProvidedComponents, methods: ProvidedMethods) => Block[];
-	onChange: (
-		allValid: Record<string, string>,
-		lastInputInfo: { index: string; value: string; focused: boolean },
-		methods: ProvidedMethods
-	) => void;
-	initialValues: Record<string, string>;
-	onError: Event;
-	onValid: Event;
-	onHide: Event;
-}
 
 function handleValidationResponse(res, currentValue = '') {
 	const isValid = res.valid;
@@ -74,11 +73,12 @@ type Pivot = (index: string, ...Match: ReturnType<Match>[]) => Block;
 type Group = (...blocks: Block[]) => Block;
 
 const components = ['Text', 'Select', 'Date', 'InlineSelect', 'Col', 'Row', 'Boolean'];
-export type ProvidedComponents = {
+type ProvidedComponents = {
 	Text: StandardInput;
 	Select: OptionInput;
 	Date: StandardInput;
 	InlineSelect: OptionInput;
+	Boolean: StandardInput;
 	Col: Block;
 	Row: Block;
 	Pivot: Pivot;
@@ -156,7 +156,10 @@ function setup() {
 		Object.fromEntries(
 			components.map((type) => {
 				const block: Input & OptionInput = (index, validate, ...args) => {
-					const props = args.slice(-1)[0];
+					const props = args.slice(-1)[0] || {};
+					const options = args[0];
+					console.log(args);
+					props.options = options;
 					index = index.toLowerCase();
 					const oc = (value, focused) => inputChanged(index, value, focused, validate, props);
 					const res = {
@@ -236,19 +239,22 @@ function inputChanged(index, value, focused, validate: Validate, props) {
 		return handleValidationResponse(validationRes, value);
 	} catch (e) {
 		console.error(e);
+		console.log(index);
 		onJSError?.(e);
 	}
 }
 
 let wrappedComponents;
 
-export function setInternalValue(...args) {
+export function setInternalValue(index, value) {
 	tick().then(() => {
-		forceRerender[args[0]] ??= true;
-		forceRerender[args[0]] = !forceRerender[args[0]];
+		forceRerender[index] ??= true;
+		forceRerender[index] = !forceRerender[index];
 		render();
 	});
-	return inputChanged(...args);
+
+	const validate = (a) => ({ valid: true, data: a });
+	return inputChanged(index, value, false, validate, {});
 }
 
 export function setDisabled(index, state) {
@@ -282,10 +288,10 @@ function indexToHeader(s) {
 	{/each}
 {/snippet}
 
-<div class="relative w-full h-min" in:scale={{ duration: 100, opacity: 0.2, start: 0.98 }}>
+<div class="relative h-min w-full" in:scale={{ duration: 100, opacity: 0.2, start: 0.98 }}>
 	<div class="">
 		{#if title}
-			<h1 class="text-3xl pb-3 font-bold underline text-center">
+			<h1 class="pb-3 text-center text-3xl font-bold underline">
 				{title}
 			</h1>
 		{/if}
@@ -296,16 +302,17 @@ function indexToHeader(s) {
 </div>
 
 {#snippet Block(Component, props)}
-	<div in:scale={{ duration: 100, opacity: 0.98, start: 0.98 }} class="flex text-sm flex-row py-2">
+	<div in:scale={{ duration: 100, opacity: 0.98, start: 0.98 }} class="flex flex-row py-2 text-sm">
 		<label
 			for={props.inputType}
-			class="min-w-36 lg:min-w-44 pr-4 text-lg xl:text-2xl text-wrap font-medium h-min /my-auto"
+			class="/my-auto h-min min-w-36 pr-4 text-lg font-medium text-wrap lg:min-w-44 xl:text-2xl"
 		>
 			{indexToHeader(props?.index || '')}:
 		</label>
 		<div class="min-h-8">
 			<div class="max-h-8 overflow-hidden">
 				{#key forceRerender[props.index]}
+					{props.options?.length}
 					<Component {...props} disabled={props.readonly || disableMap[props.index]}></Component>
 				{/key}
 			</div>
@@ -314,7 +321,7 @@ function indexToHeader(s) {
 {/snippet}
 
 {#snippet Group(type, blocks)}
-	<div class:border-t={customSpacing} class:flex-col={type === 'Col'} class="flex">
+	<div class:border-t={true} class:flex-col={type === 'Col'} class="flex">
 		{#each blocks as block, i (i)}
 			{#if block}
 				{#if block.renderType === 'block'}
