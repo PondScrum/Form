@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount, tick } from 'svelte';
+import { onMount, tick, type Snippet } from 'svelte';
 import { scale } from 'svelte/transition';
 
 interface Props {
@@ -12,17 +12,15 @@ interface Props {
 		methods: ProvidedMethods
 	) => void;
 	initialValues: Record<string, string>;
-	onError: Event;
-	onValid: Event;
-	onHide: Event;
+	onError?: Event;
+	onValid?: Event;
+	onHide?: Event;
 }
 let {
 	invalidBG,
 	onJSError,
 	getRenderedItems,
-	preOnChange,
 	onChange,
-	title,
 	initialValues,
 	onError,
 	onValid,
@@ -31,7 +29,7 @@ let {
 
 type Event = (index: string, value: string, allValues: Record<string, string>) => void;
 
-function handleValidationResponse(res, currentValue = '') {
+function handleValidationResponse(res: ReturnType<Validate>, currentValue = '') {
 	const isValid = res.valid;
 	return {
 		value: isValid ? res.data : currentValue,
@@ -55,7 +53,13 @@ type Validate = (
 
 type AdditionalProps = {};
 
-type Block = { spec: string };
+type InputProps = { index: string } & Record<string, any>;
+type RenderType = 'group' | 'block';
+type GroupType = 'row' | 'col';
+type Block =
+	| undefined
+	| { renderType: 'block'; props: InputProps; component: Snippet }
+	| { renderType: 'group'; type: GroupType; blocks: Block[] };
 type SelectOptions = Record<string, string>;
 
 type StandardInput = (index: string, validate: Validate, props: AdditionalProps) => Block;
@@ -66,7 +70,7 @@ type OptionInput = (
 	props: AdditionalProps
 ) => Block;
 
-type Match = (value: string, block: Block) => (index: string) => Block;
+type Match = (value: boolean | string, block: Block | Block[]) => (index: string) => Block[];
 
 type Pivot = (index: string, ...Match: ReturnType<Match>[]) => Block;
 
@@ -89,21 +93,21 @@ type ProvidedMethods = {
 	setDisabled: (index: string, state: boolean) => void;
 };
 
-let pivots = $state({});
+let pivots: Record<string, Record<string, Block[]>> = $state({});
 let allValues = $state(initialValues || {});
-let renderedComponents = $state([]);
+let renderedComponents: Block[] = $state([]);
 
-const match: Match = (value, block) => {
+const match: Match = (value: string | boolean, block: Block | Block[]) => {
+	let usedBool = typeof value === 'boolean';
 	let blocks: Block[] = !Array.isArray(block) ? [block] : block;
-	let includesBool = false;
-	let values: string[] = !Array.isArray(value) ? [value] : value;
-	if (values.some((e) => typeof e === 'boolean')) includesBool = true;
+	let values: string[];
+	values = !Array.isArray(value) ? [value as string] : (value as string[]);
 	const uid = values.join('');
 	return (valueIndex: string) => {
 		pivots[valueIndex] ??= {};
-		pivots[valueIndex][uid] = block;
+		pivots[valueIndex][uid] = blocks; // or block?
 		if (
-			(includesBool && Boolean(allValues[valueIndex])) ||
+			(usedBool && Boolean(allValues[valueIndex]) === value) ||
 			values
 				.slice()
 				.map((e) => e.toString().toLowerCase())
@@ -112,12 +116,15 @@ const match: Match = (value, block) => {
 			return blocks;
 		}
 
-		const allBlocks = blocks
-			.flat()
-			.map((e) => collectBlocks(e))
-			.flat()
-			.filter((e) => e);
-		allBlocks.forEach((b) => onHide(b.props.index));
+		if (onHide) {
+			const allBlocks = blocks
+				.flat()
+				.map((e) => collectBlocks(e))
+				.flat()
+				.filter((e) => e);
+			allBlocks.forEach((b) => onHide(b.props.index));
+		}
+		return [];
 	};
 };
 
@@ -128,7 +135,8 @@ const pivot: Pivot = (valueIndex, ...matches) => {
 		.filter((e) => e)
 		.flat();
 
-	const flatten = (items) => (items.every((e) => e.renderType) ? items : flatten(items.flat()));
+	const flatten = (items: any[]) =>
+		items.every((e) => e.renderType) ? items : flatten(items.flat());
 	return flatten(res);
 };
 
@@ -139,9 +147,8 @@ const buildTimeComponents = {
 
 const isGroup = (type: string) => ['Col', 'Row'].includes(type);
 
-let getComponents;
 async function render() {
-	const components = getComponents(wrappedComponents, allValues);
+	const components = getRenderedItems(wrappedComponents, allValues);
 	const toRender = components.filter((e) => e).flat();
 	if (wrappedComponents) {
 		await tick();
@@ -150,7 +157,6 @@ async function render() {
 }
 
 function setup() {
-	getComponents = getRenderedItems;
 	wrappedComponents = Object.assign(
 		buildTimeComponents,
 		Object.fromEntries(
@@ -158,7 +164,6 @@ function setup() {
 				const block: Input & OptionInput = (index, validate, ...args) => {
 					const props = args.slice(-1)[0] || {};
 					const options = args[0];
-					console.log(args);
 					props.options = options;
 					index = index.toLowerCase();
 					const oc = (value, focused) => inputChanged(index, value, focused, validate, props);
@@ -173,7 +178,6 @@ function setup() {
 							inputType: type.toLowerCase(),
 							...defaultInputProps,
 							...props
-							///...allProps[index]
 						}
 					};
 					return res;
@@ -181,7 +185,7 @@ function setup() {
 				return [
 					type,
 					isGroup(type)
-						? (...blocks) => {
+						? (...blocks: Block[]) => {
 								return { renderType: 'group', type, blocks };
 							}
 						: block
@@ -194,20 +198,33 @@ function setup() {
 onMount(() => {
 	setup();
 	render();
-	// tick().then(render);
 });
 
-function collectBlocks(obj, allBlocks = []) {
+type BaseBlock = { renderType: 'block'; props: InputProps; component: Snippet };
+function collectBlocks(obj: Block): BaseBlock[] {
+	let allBlocks: BaseBlock[] = [];
 	if (!obj) return allBlocks;
-	if (obj.blocks) {
-		return obj.blocks.map((e) => collectBlocks(e)).flat();
+	if ('blocks' in obj) {
+		const res = obj.blocks.map((e) => collectBlocks(e)).flat() as {
+			renderType: 'block';
+			props: InputProps;
+			component: Snippet;
+		}[];
+		return res;
 	} else if (obj.renderType === 'block') {
 		allBlocks = [...allBlocks, obj];
-		return allBlocks;
+		return allBlocks as { renderType: 'block'; props: InputProps; component: Snippet }[];
 	}
+	return [];
 }
 
-function inputChanged(index, value, focused, validate: Validate, props) {
+function inputChanged(
+	index: string,
+	value: string,
+	focused: boolean,
+	validate: Validate,
+	props: InputProps
+) {
 	const readonly = props?.readonly;
 	try {
 		index = index.toLowerCase();
@@ -228,7 +245,7 @@ function inputChanged(index, value, focused, validate: Validate, props) {
 
 		const eventToRun = validationRes.valid ? onValid : onError;
 
-		!readonly && eventToRun(index, validationRes.data, allValues);
+		!readonly && eventToRun && eventToRun(index, validationRes.data, allValues);
 
 		onChange(
 			$state.snapshot(allValues),
@@ -244,75 +261,85 @@ function inputChanged(index, value, focused, validate: Validate, props) {
 	}
 }
 
-let wrappedComponents;
+let wrappedComponents: ProvidedComponents;
 
-export function setInternalValue(index, value) {
+export function setInternalValue(index: string, value: string) {
 	tick().then(() => {
 		forceRerender[index] ??= true;
 		forceRerender[index] = !forceRerender[index];
 		render();
 	});
 
-	const validate = (a) => ({ valid: true, data: a });
-	return inputChanged(index, value, false, validate, {});
+	const validate = (a: string) => ({ valid: true, data: a });
+	return inputChanged(index, value, false, validate, { index }); //todo: figure out how to handle lack of props here
 }
 
-export function setDisabled(index, state) {
+export function setDisabled(index: string, state: boolean) {
 	disableMap[index] = state;
 }
 
-function setRendered(v) {
+function setRendered(v: Block[]) {
 	renderedComponents = v.filter((e) => e);
 }
 
-let disableMap = $state({});
-let forceRerender = $state({});
+let disableMap: Record<string, boolean> = $state({});
+let forceRerender: Record<string, boolean> = $state({});
 
-function indexToHeader(s) {
-	return s;
+function indexToHeader(str: string) {
+	if (!str) {
+		return str;
+	}
+	return str
+		.toLowerCase()
+		.split('_')
+		.map((word) => {
+			return word.charAt(0).toUpperCase() + word.slice(1);
+		})
+		.join(' ');
 }
 </script>
 
-{#snippet handleArr(items)}
+{#snippet handleArr(items: Block[])}
 	{#each items as renderSpec}
-		{@const { renderType } = renderSpec}
-		{#if renderType == 'group'}
-			{@const { type, blocks } = renderSpec}
-			{@render Group(type, blocks)}
-		{:else}
-			{@const { component, props } = renderSpec}
-			{#key props.id}
-				{@render Block(component, props)}
-			{/key}
+		{#if renderSpec}
+			{@const { renderType } = renderSpec}
+			{#if renderType == 'group'}
+				{@const { type, blocks } = renderSpec}
+				{@render Group(type, blocks)}
+			{:else}
+				{@const { component, props } = renderSpec}
+				{#key props.id}
+					{@render Block(component, props)}
+				{/key}
+			{/if}
 		{/if}
 	{/each}
 {/snippet}
 
 <div class="relative h-min w-full" in:scale={{ duration: 100, opacity: 0.2, start: 0.98 }}>
 	<div class="">
-		{#if title}
-			<h1 class="pb-3 text-center text-3xl font-bold underline">
-				{title}
-			</h1>
-		{/if}
+		<!-- {#if title} -->
+		<!-- 	<h1 class="pb-3 text-center text-3xl font-bold underline"> -->
+		<!-- 		{title} -->
+		<!-- 	</h1> -->
+		<!-- {/if} -->
 		<div class="">
 			{@render handleArr(renderedComponents)}
 		</div>
 	</div>
 </div>
 
-{#snippet Block(Component, props)}
+{#snippet Block(Component: Snippet, props: InputProps)}
 	<div in:scale={{ duration: 100, opacity: 0.98, start: 0.98 }} class="flex flex-row py-2 text-sm">
 		<label
 			for={props.inputType}
-			class="/my-auto h-min min-w-36 pr-4 text-lg font-medium text-wrap lg:min-w-44 xl:text-2xl"
+			class="/my-auto h-min min-w-36 pr-4 text-lg font-medium text-wrap capitalize lg:min-w-44 xl:text-2xl"
 		>
 			{indexToHeader(props?.index || '')}:
 		</label>
 		<div class="min-h-8">
 			<div class="max-h-8 overflow-hidden">
 				{#key forceRerender[props.index]}
-					{props.options?.length}
 					<Component {...props} disabled={props.readonly || disableMap[props.index]}></Component>
 				{/key}
 			</div>
@@ -320,8 +347,8 @@ function indexToHeader(s) {
 	</div>
 {/snippet}
 
-{#snippet Group(type, blocks)}
-	<div class:border-t={true} class:flex-col={type === 'Col'} class="flex">
+{#snippet Group(type: GroupType, blocks: Block[])}
+	<div class:border-t={true} class:flex-col={type === 'col'} class="flex">
 		{#each blocks as block, i (i)}
 			{#if block}
 				{#if block.renderType === 'block'}

@@ -25,18 +25,20 @@ const getRenderedItems: GetRendered = (
 		Object.fromEntries(values.text?.split('').map((e) => [e, e]) || []),
 		{}
 	);
-	return [normalText, dynamicSelect];
+	return [
+		normalText,
+		Pivot(
+			'text',
+			Match(true, [
+				dynamicSelect,
+				InlineSelect('inline_select', defValidate, { '0': '0', '1': '1' }, {})
+			])
+		)
+	];
 };
 </script>
 
 <div class="p-8">
-	<Form
-		{onChange}
-		invalidBG={'bg-red-500'}
-		onValid={(...args) => console.log('onValid', args)}
-		onError={(...args) => console.log('onError', args)}
-		onHide={(...args) => console.log('onHide', args)}
-		{getRenderedItems}
-	></Form>
+	<Form {onChange} invalidBG={'bg-red-500'} {getRenderedItems} onHide={() => {}}></Form>
 </div>
 <!-- {@render children()} -->
