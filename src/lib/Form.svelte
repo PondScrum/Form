@@ -80,7 +80,7 @@ type Pivot = (index: string, ...Match: ReturnType<Match>[]) => Block;
 
 type Group = (...blocks: Block[]) => Block;
 
-const components = ['Text', 'Select', 'Date', 'InlineSelect', 'Col', 'Row', 'Boolean'];
+const components = ['Text', 'Select', 'Date', 'InlineSelect', 'Col', 'Row', 'Boolean', 'Header'];
 type ProvidedComponents = {
 	Text: StandardInput;
 	Select: OptionInput;
@@ -200,13 +200,20 @@ function setup() {
 					};
 					return res;
 				};
+				const header = (headerText) => ({
+					renderType: 'block',
+					component: 'header',
+					props: { header: headerText }
+				});
 				return [
 					type,
 					isGroup(type)
 						? (...blocks: Block[]) => {
 								return { renderType: 'group', type, blocks };
 							}
-						: block
+						: type === 'Header'
+							? header
+							: block
 				];
 			})
 		)
@@ -358,27 +365,37 @@ function indexToHeader(str: string) {
 	</div>
 </div>
 
-{#snippet Block(Component: Snippet, props: InputProps)}
+{#snippet Block(Component: Snippet | 'header', props: InputProps)}
 	<div
 		in:scale={{ duration: 100, opacity: 0.98, start: 0.98 }}
 		class:flex-col={props.col}
 		class="flex py-2 text-sm"
 	>
-		{#if !props.hideLabel}
-			<label
-				for={props.inputType}
-				class="/my-auto h-min min-w-36 pr-4 text-lg font-medium text-wrap capitalize lg:min-w-44 xl:text-2xl"
-			>
-				{indexToHeader(props?.index || '')}:
-			</label>
-		{/if}
-		<div class="min-h-8">
-			<div class="max-h-8 overflow-hidden">
-				{#key forceRerender[props.index]}
-					<Component {...props} disabled={props.readonly || disableMap[props.index]}></Component>
-				{/key}
+		{#if Component === 'header'}
+			<p class="text-5xl font-medium">
+				{props.header}
+			</p>
+		{:else}
+			{#if !props.hideLabel || props.aliasLabel}
+				<label
+					for={props.inputType}
+					class="/my-auto {props.labelClass} h-min min-w-36 pr-4 text-lg font-medium text-wrap capitalize lg:min-w-44 xl:text-2xl"
+				>
+					{indexToHeader(props.aliasLabel || props?.index || '')}:
+				</label>
+			{/if}
+			<div class="min-h-8">
+				<div class="max-h-8 overflow-hidden">
+					{#key forceRerender[props.index]}
+						<Component
+							cls={props.inputClass}
+							{...props}
+							disabled={props.readonly || disableMap[props.index]}
+						></Component>
+					{/key}
+				</div>
 			</div>
-		</div>
+		{/if}
 	</div>
 {/snippet}
 
