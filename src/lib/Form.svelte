@@ -3,6 +3,7 @@ import { onMount, tick, type Snippet } from 'svelte';
 import { scale } from 'svelte/transition';
 
 interface Props {
+	valid: boolean;
 	invalidBG: string;
 	onJSError: (e: Error) => void;
 	getRenderedItems: (components: ProvidedComponents, allValues: Record<string, string>) => Block[];
@@ -15,8 +16,10 @@ interface Props {
 	onError?: Event;
 	onValid?: Event;
 	onHide?: Event;
+	onShow?: Event;
 }
 let {
+	valid = $bindable(),
 	invalidBG,
 	onJSError,
 	getRenderedItems,
@@ -24,7 +27,8 @@ let {
 	initialValues,
 	onError,
 	onValid,
-	onHide
+	onHide,
+	onShow
 }: Props = $props();
 
 type Event = (index: string, value: string, allValues: Record<string, string>) => void;
@@ -96,6 +100,7 @@ type ProvidedMethods = {
 let pivots: Record<string, Record<string, Block[]>> = $state({});
 let allValues = $state(initialValues || {});
 let renderedComponents: Block[] = $state([]);
+let hidden = $state([]);
 
 const match: Match = (value: string | boolean, block: Block | Block[]) => {
 	let usedBool = typeof value === 'boolean';
@@ -104,6 +109,8 @@ const match: Match = (value: string | boolean, block: Block | Block[]) => {
 	values = !Array.isArray(value) ? [value as string] : (value as string[]);
 	const uid = values.join('');
 	return (valueIndex: string) => {
+		const lastHidden = hidden.slice();
+		hidden = [];
 		pivots[valueIndex] ??= {};
 		pivots[valueIndex][uid] = blocks; // or block?
 		if (
@@ -113,17 +120,19 @@ const match: Match = (value: string | boolean, block: Block | Block[]) => {
 				.map((e) => e.toString().toLowerCase())
 				.includes(allValues[valueIndex]?.toString()?.toLowerCase())
 		) {
+			lastHidden.forEach((b) => onShow(b));
 			return blocks;
 		}
-
-		if (onHide) {
-			const allBlocks = blocks
-				.flat()
-				.map((e) => collectBlocks(e))
-				.flat()
-				.filter((e) => e);
-			allBlocks.forEach((b) => onHide(b.props.index));
-		}
+		const allBlocks = blocks
+			.flat()
+			.map((e) => collectBlocks(e))
+			.flat()
+			.filter((e) => e);
+		hidden = allBlocks.slice().map((b) => b.props.index);
+		console.log(valueIndex);
+		allBlocks.forEach((b) =>
+			!lastHidden.includes(b) ? onHide(b.props.index) : onShow(b.props.index)
+		);
 		return [];
 	};
 };
@@ -218,6 +227,13 @@ function collectBlocks(obj: Block): BaseBlock[] {
 	return [];
 }
 
+let validityMap = $state({});
+
+function determineValidity() {
+	const nonHiddenFields = Object.keys(allValues).filter((e) => !hidden.includes(e));
+	return nonHiddenFields.every((k) => validityMap[k]);
+}
+
 function inputChanged(
 	index: string,
 	value: string,
@@ -228,8 +244,7 @@ function inputChanged(
 	const readonly = props?.readonly;
 	try {
 		index = index.toLowerCase();
-		const valid = { valid: true, data: value };
-		let validationRes = valid;
+		let validationRes = { valid: true, data: value };
 		if (!readonly) {
 			validationRes = validate(value, focused);
 			// if (preOnChange) {
@@ -239,6 +254,10 @@ function inputChanged(
 			// }
 		}
 
+		validityMap[index] = validationRes.valid;
+		tick().then(() => {
+			valid = determineValidity();
+		});
 		const convertedResponse = handleValidationResponse(validationRes, value);
 
 		allValues[index] = convertedResponse.value;
@@ -299,6 +318,8 @@ function indexToHeader(str: string) {
 		.join(' ');
 }
 </script>
+
+{JSON.stringify(hidden)}
 
 {#snippet handleArr(items: Block[])}
 	{#each items as renderSpec}

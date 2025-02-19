@@ -10,8 +10,8 @@ type GetRendered = ComponentProps<typeof Form>['getRenderedItems'];
 type OnChange = ComponentProps<typeof Form>['onChange'];
 
 const onChange: OnChange = (allValues, lastInputInfo, methods) => {
-	lastInputInfo.index === 'text' &&
-		methods.setInternalValue('dynamic', 'force rerender manually', defValidate);
+	// lastInputInfo.index === 'text' &&
+	// 	methods.setInternalValue('dynamic', 'force rerender manually', defValidate);
 };
 
 const getRenderedItems: GetRendered = (
@@ -31,14 +31,29 @@ const getRenderedItems: GetRendered = (
 			'text',
 			Match(true, [
 				dynamicSelect,
-				InlineSelect('inline_select', defValidate, { '0': '0', '1': '1' }, {})
+				InlineSelect('inline_select', (a) => a !== 'z', { '0': '0', '1': '1' }, {})
 			])
 		)
 	];
 };
+let valid = $state();
 </script>
 
+<p class="p-4 text-lg font-semibold">
+	{valid}
+</p>
 <div class="p-8">
-	<Form {onChange} invalidBG={'bg-red-500'} {getRenderedItems} onHide={() => {}}></Form>
+	<Form
+		bind:valid
+		{onChange}
+		invalidBG={'bg-red-500'}
+		{getRenderedItems}
+		onShow={(b) => {
+			console.log(b, 'JUST SHOWN');
+		}}
+		onHide={(b) => {
+			console.log(b, 'JUST HIDDEN');
+		}}
+	></Form>
 </div>
 <!-- {@render children()} -->
