@@ -1,6 +1,6 @@
 <script lang="ts">
 import type { ComponentProps } from 'svelte';
-import Form from '../Form.svelte';
+import Form from '$lib/Form.svelte';
 import '../app.css';
 let { children } = $props();
 

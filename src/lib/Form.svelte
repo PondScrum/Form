@@ -253,6 +253,7 @@ function inputChanged(
 			{ setInternalValue, setDisabled }
 		);
 		render();
+		console.log('render');
 		return handleValidationResponse(validationRes, value);
 	} catch (e) {
 		console.error(e);
