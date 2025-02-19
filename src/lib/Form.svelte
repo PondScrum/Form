@@ -137,6 +137,7 @@ const match: Match = (value: string | boolean, block: Block | Block[]) => {
 		const hide = (index) => {
 			if (!hidden[index]) {
 				hidden[index] = true;
+				//setInternalValue(index,'');
 				onHide?.(index);
 				return index;
 			}
@@ -261,6 +262,15 @@ function inputChanged(
 	const readonly = props?.readonly;
 	try {
 		index = index.toLowerCase();
+		if (props.key && value !== allValues[index]) {
+			//this will def not work in cases of validation fn's returning override values
+			tick().then(() =>
+				tick().then(() => {
+					forceRerender[props.key] ??= true;
+					forceRerender[props.key] = !forceRerender[props.key];
+				})
+			);
+		}
 		let validationRes = { valid: true, data: value };
 		if (!readonly) {
 			validationRes = validate(value, focused);
@@ -288,6 +298,7 @@ function inputChanged(
 			{ index, value: convertedResponse.value, focused },
 			{ setInternalValue, setDisabled }
 		);
+
 		render();
 		return handleValidationResponse(validationRes, value);
 	} catch (e) {
@@ -301,13 +312,18 @@ let wrappedComponents: ProvidedComponents;
 
 export function setInternalValue(index: string, value: string) {
 	tick().then(() => {
-		forceRerender[index] ??= true;
-		forceRerender[index] = !forceRerender[index];
-		render();
+		componentMap[index].setValue(value);
+		//render();
 	});
-
-	const validate = (a: string) => ({ valid: true, data: a });
-	return inputChanged(index, value, false, validate, { index }); //todo: figure out how to handle lack of props here
+	// console.log(index,value);
+	// tick().then(() => {
+	// 	forceRerender[index] ??= true;
+	// 	forceRerender[index] = !forceRerender[index];
+	// 	render();
+	// });
+	//
+	// const validate = (a: string) => ({ valid: true, data: a });
+	// return inputChanged(index, value, false, validate, { index }); //todo: figure out how to handle lack of props here
 }
 
 export function setDisabled(index: string, state: boolean) {
@@ -333,6 +349,8 @@ function indexToHeader(str: string) {
 		})
 		.join(' ');
 }
+let componentMap = $state({});
+$inspect(componentMap);
 </script>
 
 {#snippet handleArr(items: Block[])}
@@ -388,6 +406,7 @@ function indexToHeader(str: string) {
 				<div class="max-h-8 overflow-hidden">
 					{#key forceRerender[props.index]}
 						<Component
+							bind:this={componentMap[props.index]}
 							cls={props.inputClass}
 							{...props}
 							disabled={props.readonly || disableMap[props.index]}

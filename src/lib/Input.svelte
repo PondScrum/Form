@@ -1,14 +1,12 @@
 <script lang="ts">
 import type { HTMLInputTypeAttribute, ChangeEventHandler } from 'svelte/elements';
-// import { tooltip, createSingletonTooltip, type TooltipParams } from '$utils/tooltip.svelte';
+import { tooltip, createSingletonTooltip, type TooltipParams } from './tooltip.svelte';
 import { getContext, onDestroy, onMount, tick, untrack } from 'svelte';
 // import Textarea from './Textarea.svelte';
 // import CONF from '$config';
 import { scale } from 'svelte/transition';
 import { on } from 'svelte/events';
 
-const tooltip = (e, o) => {};
-const createSingletonTooltip = () => ({ singleton_tooltip: tooltip, singleton: {} });
 const indexToHeader = (s) => s;
 
 const tooltipSide = getContext('tooltipSide') || 'right';
@@ -89,6 +87,9 @@ let chosenBackgroundColor = $derived((useResultBG && resultBackgroundColor) || b
 let isFocused: boolean = $state(false);
 
 export function setValue(value: string) {
+	if (inputType === 'inlineselect') {
+		lastSelectVal = initialValue;
+	}
 	handleResult(valueChanged(value, false), document.getElementById(id) as PossibleInputs);
 }
 export function focus() {
@@ -128,12 +129,17 @@ onMount(() => {
 });
 
 function mounted(elem: PossibleInputs, customFN = null) {
+	console.log('a');
 	if (mount) mount(setValue);
+	if (inputType === 'inlineselect') {
+		lastSelectVal = initialValue;
+	}
 	if (onlyValue) {
 		handleResult(initialValue, elem);
 		return;
 	}
 	//tick
+	console.log('valuechanged', id, initialValue);
 	handleResult(valueChanged(initialValue || '', isFocused), elem);
 	customFN && customFN();
 }
@@ -229,7 +235,7 @@ const niceHTML = (c) => c && `<h1 class="text-lg capitalize py-1 tracking-tight"
 				onfocus={events.onfocus}
 				{disabled}
 				{id}
-				class="{cls} {chosenBackgroundColor}"
+				class="{cls} outline-none {chosenBackgroundColor}"
 				use:mounted
 				use:tooltip={tooltipParams}
 			>
