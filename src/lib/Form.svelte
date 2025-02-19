@@ -100,6 +100,8 @@ type ProvidedMethods = {
 let pivots: Record<string, Record<string, Block[]>> = $state({});
 let allValues = $state(initialValues || {});
 let renderedComponents: Block[] = $state([]);
+// let hidden: string[] = $state([]);
+
 let hidden = $state([]);
 
 const match: Match = (value: string | boolean, block: Block | Block[]) => {
@@ -109,10 +111,19 @@ const match: Match = (value: string | boolean, block: Block | Block[]) => {
 	values = !Array.isArray(value) ? [value as string] : (value as string[]);
 	const uid = values.join('');
 	return (valueIndex: string) => {
-		const lastHidden = hidden.slice();
-		hidden = [];
+		// let lastHidden = hidden.slice();
+		// console.log(lastHidden);
 		pivots[valueIndex] ??= {};
 		pivots[valueIndex][uid] = blocks; // or block?
+		const show = (index) => {
+			hidden[index] && onShow(index);
+			delete hidden[index];
+		};
+		const allBlocks = blocks
+			.flat()
+			.map((e) => collectBlocks(e))
+			.flat()
+			.filter((e) => e);
 		if (
 			(usedBool && Boolean(allValues[valueIndex]) === value) ||
 			values
@@ -120,19 +131,17 @@ const match: Match = (value: string | boolean, block: Block | Block[]) => {
 				.map((e) => e.toString().toLowerCase())
 				.includes(allValues[valueIndex]?.toString()?.toLowerCase())
 		) {
-			lastHidden.forEach((b) => onShow(b));
+			allBlocks.forEach((b) => show(b.props.index));
 			return blocks;
 		}
-		const allBlocks = blocks
-			.flat()
-			.map((e) => collectBlocks(e))
-			.flat()
-			.filter((e) => e);
-		hidden = allBlocks.slice().map((b) => b.props.index);
-		console.log(valueIndex);
-		allBlocks.forEach((b) =>
-			!lastHidden.includes(b) ? onHide(b.props.index) : onShow(b.props.index)
-		);
+		const hide = (index) => {
+			if (!hidden[index]) {
+				hidden[index] = true;
+				onHide?.(index);
+				return index;
+			}
+		};
+		allBlocks.forEach((e) => hide(e.props.index));
 		return [];
 	};
 };
@@ -230,6 +239,7 @@ function collectBlocks(obj: Block): BaseBlock[] {
 let validityMap = $state({});
 
 function determineValidity() {
+	let hidden = [];
 	const nonHiddenFields = Object.keys(allValues).filter((e) => !hidden.includes(e));
 	return nonHiddenFields.every((k) => validityMap[k]);
 }
@@ -272,7 +282,6 @@ function inputChanged(
 			{ setInternalValue, setDisabled }
 		);
 		render();
-		console.log('render');
 		return handleValidationResponse(validationRes, value);
 	} catch (e) {
 		console.error(e);
@@ -319,8 +328,6 @@ function indexToHeader(str: string) {
 }
 </script>
 
-{JSON.stringify(hidden)}
-
 {#snippet handleArr(items: Block[])}
 	{#each items as renderSpec}
 		{#if renderSpec}
@@ -352,13 +359,19 @@ function indexToHeader(str: string) {
 </div>
 
 {#snippet Block(Component: Snippet, props: InputProps)}
-	<div in:scale={{ duration: 100, opacity: 0.98, start: 0.98 }} class="flex flex-row py-2 text-sm">
-		<label
-			for={props.inputType}
-			class="/my-auto h-min min-w-36 pr-4 text-lg font-medium text-wrap capitalize lg:min-w-44 xl:text-2xl"
-		>
-			{indexToHeader(props?.index || '')}:
-		</label>
+	<div
+		in:scale={{ duration: 100, opacity: 0.98, start: 0.98 }}
+		class:flex-col={props.col}
+		class="flex py-2 text-sm"
+	>
+		{#if !props.hideLabel}
+			<label
+				for={props.inputType}
+				class="/my-auto h-min min-w-36 pr-4 text-lg font-medium text-wrap capitalize lg:min-w-44 xl:text-2xl"
+			>
+				{indexToHeader(props?.index || '')}:
+			</label>
+		{/if}
 		<div class="min-h-8">
 			<div class="max-h-8 overflow-hidden">
 				{#key forceRerender[props.index]}

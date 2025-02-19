@@ -293,9 +293,9 @@ const niceHTML = (c) => c && `<h1 class="text-lg capitalize py-1 tracking-tight"
 			class="flex text-nowrap"
 		>
 			<div
-				class="border {chosenBackgroundColor === 'bg-red-500'
+				class=" {chosenBackgroundColor === 'bg-red-500'
 					? 'text-white hover:*:bg-red-600  '
-					: ' transition-colors duration-150'} {chosenBackgroundColor} flex h-7 w-full justify-end divide-x divide-zinc-500 overflow-hidden rounded border-gray-500 text-base lg:h-8"
+					: ' transition-colors duration-150'} {chosenBackgroundColor} flex justify-end divide-x divide-zinc-500 overflow-hidden rounded border-gray-500 text-base lg:h-8"
 			>
 				{#each Object.entries(options) as [choice, displayChoice], i}
 					<button
