@@ -155,6 +155,7 @@ function handleResult(result: string | FormValidationReturn<string>, target: Pos
 	}
 	result = result as FormValidationReturn<string>;
 	target[indexer] = result.value;
+	console.log(result.background_color);
 	resultBackgroundColor = result.background_color;
 	tooltipContent = result.tooltip;
 }
@@ -174,16 +175,19 @@ const oninput: ChangeEventHandler<PossibleInputs> = (e) => {
 };
 
 let tooltipShown = $state();
+const niceHTML = (c) =>
+	c && `<h1 class="text-base xl:text-lg capitalize py-1 tracking-tight">${c}</h1>`;
 const wasLastTooltipShowing = () => $state.snapshot(untrack(() => tooltipShown));
 let tooltipParams = () => {
 	const res = {
 		id,
 		onShow: () => (tooltipShown = true),
 		disabled: onlyValue,
-		content: tooltipContent,
+		content: niceHTML(tooltipContent),
 		trigger: 'mouseenter',
 		focused: isFocused,
 		placement: tooltipSide,
+		allowHTML: true,
 		delay: tooltipDelay,
 		duration: wasLastTooltipShowing() ? 0 : 75,
 		animation: 'scale-subtle',
@@ -220,8 +224,6 @@ export const onblur = (e: FocusEvent) => {
 
 let focusedFromOutside = $state(false);
 let lastSelectVal = $state();
-
-const niceHTML = (c) => c && `<h1 class="text-lg capitalize py-1 tracking-tight">${c}</h1>`;
 </script>
 
 {#if events}
@@ -262,7 +264,7 @@ const niceHTML = (c) => c && `<h1 class="text-lg capitalize py-1 tracking-tight"
 		<!-- 		{events} -->
 		<!-- 	></Textarea> -->
 	{:else if inputType === 'boolean'}
-		<div class="h-full w-auto">
+		<div class="flex h-full w-auto">
 			<input
 				use:mounted
 				onclick={(e) => {
@@ -280,7 +282,7 @@ const niceHTML = (c) => c && `<h1 class="text-lg capitalize py-1 tracking-tight"
 				}}
 				{id}
 				tabindex={disabled ? -1 : tabindex}
-				class="h-7 w-7 accent-blue-500 outline-none"
+				class="mx-auto h-7 w-7 accent-blue-500 outline-none"
 				type="checkbox"
 			/>
 		</div>
@@ -299,18 +301,17 @@ const niceHTML = (c) => c && `<h1 class="text-lg capitalize py-1 tracking-tight"
 			class="flex text-nowrap"
 		>
 			<div
-				class=" {chosenBackgroundColor === 'bg-red-500'
-					? 'text-white hover:*:bg-red-600  '
-					: ' transition-colors duration-150'} {chosenBackgroundColor} flex justify-end divide-x divide-zinc-500 overflow-hidden rounded border-gray-500 text-base lg:h-8"
+				class="flex justify-end divide-x divide-zinc-500 overflow-hidden rounded border-gray-500 text-base lg:h-8"
 			>
+				<!-- fix this class:text-white, conflicting with chosenbackgroundcolor -->
 				{#each Object.entries(options) as [choice, displayChoice], i}
 					<button
 						tabindex={disabled ? -1 : tabindex}
 						{disabled}
-						class:selected={lastSelectVal === choice}
-						class:text-white={lastSelectVal === choice}
+						class:bg-blue-500={lastSelectVal === choice}
+						class:text-white={lastSelectVal === choice || tooltipContent}
 						id={id + '-' + i}
-						class="{cls}   font-medium {lastSelectVal === choice ? 'bg-blue-500' : ''}"
+						class=" {cls} a {chosenBackgroundColor} "
 						onmouseleave={singleton.enable}
 						onmousedown={singleton.disable}
 						onclick={(e) => {

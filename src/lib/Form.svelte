@@ -4,7 +4,6 @@ import { scale } from 'svelte/transition';
 
 interface Props {
 	valid: boolean;
-	invalidBG: string;
 	onJSError: (e: Error) => void;
 	getRenderedItems: (components: ProvidedComponents, allValues: Record<string, string>) => Block[];
 	onChange: (
@@ -20,7 +19,6 @@ interface Props {
 }
 let {
 	valid = $bindable(),
-	invalidBG,
 	onJSError,
 	getRenderedItems,
 	onChange,
@@ -28,17 +26,19 @@ let {
 	onError,
 	onValid,
 	onHide,
-	onShow
+	onShow,
+	classes = {}
 }: Props = $props();
 
 type Event = (index: string, value: string, allValues: Record<string, string>) => void;
+const DEFAULT_INVALID_BG = 'bg-red-500';
 
 function handleValidationResponse(res: ReturnType<Validate>, currentValue = '') {
 	const isValid = res.valid;
 	return {
 		value: isValid ? res.data : currentValue,
 		tooltip: isValid ? '' : res.data,
-		background_color: isValid ? '' : invalidBG
+		background_color: isValid ? '' : classes.invalid || DEFAULT_INVALID_BG
 	};
 }
 
@@ -111,8 +111,6 @@ const match: Match = (value: string | boolean, block: Block | Block[]) => {
 	values = !Array.isArray(value) ? [value as string] : (value as string[]);
 	const uid = values.join('');
 	return (valueIndex: string) => {
-		// let lastHidden = hidden.slice();
-		// console.log(lastHidden);
 		pivots[valueIndex] ??= {};
 		pivots[valueIndex][uid] = blocks; // or block?
 		const show = (index) => {
@@ -302,8 +300,8 @@ function inputChanged(
 		render();
 		return handleValidationResponse(validationRes, value);
 	} catch (e) {
+		console.error(index);
 		console.error(e);
-		console.log(index);
 		onJSError?.(e);
 	}
 }
@@ -315,15 +313,6 @@ export function setInternalValue(index: string, value: string) {
 		componentMap[index].setValue(value);
 		//render();
 	});
-	// console.log(index,value);
-	// tick().then(() => {
-	// 	forceRerender[index] ??= true;
-	// 	forceRerender[index] = !forceRerender[index];
-	// 	render();
-	// });
-	//
-	// const validate = (a: string) => ({ valid: true, data: a });
-	// return inputChanged(index, value, false, validate, { index }); //todo: figure out how to handle lack of props here
 }
 
 export function setDisabled(index: string, state: boolean) {
@@ -351,6 +340,8 @@ function indexToHeader(str: string) {
 }
 let componentMap = $state({});
 $inspect(componentMap);
+const DEFAULT_LABEL_CLASS =
+	'h-min min-w-36 pr-4 text-lg font-medium text-wrap capitalize lg:min-w-44 xl:text-2xl';
 </script>
 
 {#snippet handleArr(items: Block[])}
@@ -387,7 +378,7 @@ $inspect(componentMap);
 	<div
 		in:scale={{ duration: 100, opacity: 0.98, start: 0.98 }}
 		class:flex-col={props.col}
-		class="flex py-2 text-sm"
+		class="flex py-4 text-sm"
 	>
 		{#if Component === 'header'}
 			<p class="text-5xl font-medium">
@@ -397,13 +388,17 @@ $inspect(componentMap);
 			{#if !props.hideLabel || props.aliasLabel}
 				<label
 					for={props.inputType}
-					class="/my-auto {props.labelClass} h-min min-w-36 pr-4 text-lg font-medium text-wrap capitalize lg:min-w-44 xl:text-2xl"
+					class="/my-auto {props.labelClass || classes.label || DEFAULT_LABEL_CLASS} "
 				>
-					{indexToHeader(props.aliasLabel || props?.index || '')}:
+					{#if props.labelHTML}
+						{@html props.labelHTML}
+					{:else}
+						{indexToHeader(props.aliasLabel || props?.index || '')}
+					{/if}
 				</label>
 			{/if}
-			<div class="min-h-8">
-				<div class="max-h-8 overflow-hidden">
+			<div class="flex min-h-8">
+				<div class="mx-auto my-auto max-h-8 overflow-hidden">
 					{#key forceRerender[props.index]}
 						<Component
 							bind:this={componentMap[props.index]}

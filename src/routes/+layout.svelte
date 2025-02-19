@@ -45,6 +45,9 @@ const simpleFormEX: GetRendered = (
 		)
 	];
 };
+const arrowSVG = `<div class='h-full px-3 flex'> <svg xmlns="http://www.w3.org/2000/svg" class='my-auto' width="19.99" height="18" viewBox="0 0 19.99 18">
+  <polygon points="10.029 5 0 5 0 12.967 10.029 12.967 10.029 18 19.99 8.952 10.029 0 10.029 5"/>
+	</svg></div>`;
 
 const cmpDisplayMap = {
 	gt: 'is greater than',
@@ -52,7 +55,9 @@ const cmpDisplayMap = {
 	Equal: 'equals'
 };
 
+let hasHeader = false;
 const getRenderedItems: GetRendered = (
+	i,
 	{ InlineSelect, Row, Col, Boolean, Pivot, Match, Text, Select, Header },
 	values
 ) => {
@@ -78,7 +83,7 @@ const getRenderedItems: GetRendered = (
 
 	const valueString = `If ${values.col} ${cmpDisplayMap[values.colcmp]} `;
 	return [
-		//Header('Pocket Frame Rule'),
+		i === 0 && Header('Pocket Frame Rule'),
 		indexSelect,
 		Pivot(
 			'col',
@@ -96,7 +101,14 @@ const getRenderedItems: GetRendered = (
 					Pivot(
 						//left off here, pivot needs to rerender when other item hidden
 						'colcmp',
-						Match(['lt', 'gt'], Boolean('Or Equal To', defValidate, { labelClass: 'pl-4' }))
+						Match(
+							['lt', 'gt'],
+							Boolean('Or Equal To?', defValidate, {
+								inputClass: 'mx-auto',
+								labelClass: 'text-nowrap pl-4 font-bold text-center underline',
+								col: true
+							})
+						)
 					)
 					// Pivot('col',Match(true,Pivot(//left off here, pivot needs to rerender when other item hidden
 					// 	'colcmp',
@@ -108,34 +120,34 @@ const getRenderedItems: GetRendered = (
 						'valuesource',
 						defValidate,
 						{ tableval: 'Current Table Value', userval: 'Custom Value' },
-						{ aliasLabel: 'To A' }
+						{ aliasLabel: values.colcmp === 'equal' ? 'To a' : 'a' }
 					),
 					Pivot(
 						'valuesource',
 						Match(
 							'userval',
 							isSelectorCol(values.col)
-								? createSelect('value', selectorOptions, { hideLabel: true })
-								: Text('value', defValidate, { hideLabel: true })
+								? createSelect('value', selectorOptions, { labelClass: 'e', labelHTML: arrowSVG })
+								: Text('value', defValidate, { labelClass: 'e', labelHTML: arrowSVG })
 						),
 						Match(
 							'tableval',
-							createSelect('Table Column Cell Value', colOptions, { hideLabel: true })
+							createSelect('Table Column Cell Value', colOptions, {
+								labelClass: 'e',
+								labelHTML: arrowSVG
+							})
 						)
 					)
 				),
-				Row(
-					InlineSelect(
-						'then',
-						defValidate,
-						{ error: 'Show Error Message', warning: 'Show Warning Message', and: 'and' },
-						{ hideLabel: true }
-					),
-					Pivot(
-						'then',
-						Match(['error', 'warning'], Text('message', defValidate, { hideLabel: true }))
-					)
-				) //Match('and',Form) for now handle it within oncahnge and this components state
+				// Row(
+				InlineSelect(
+					'then',
+					defValidate,
+					{ and: 'AND', error: 'Show Error', warning: 'Show Warning' },
+					{ hideLabel: true }
+				),
+				Pivot('then', Match(['error', 'warning'], Text('message', defValidate, {})))
+				//			) //Match('and',Form) for now handle it within oncahnge and this components state
 			])
 		)
 	];
@@ -155,32 +167,26 @@ let formVals = $state({});
 	<!-- {#key currentRenderForm} -->
 	{#each forms as getRenderedItems, i (i)}
 		{#if i === 0 || formVals[i - 1]?.then === 'and'}
-			<Form
-				bind:valid
-				onChange={(...args) => onChange(i, ...args)}
-				invalidBG={'bg-red-500/80'}
-				{getRenderedItems}
-				onShow={(b) => {
-					console.log(b, 'JUST SHOWN');
-				}}
-				onHide={(b) => {
-					console.log(b, 'JUST HIDDEN');
-				}}
-			></Form>
+			<div
+				style="padding: {i + 2}rem; padding-top:1rem; padding-bottom: 0rem;"
+				class="mx-auto w-3/4 overflow-auto font-bold first:border-t last:border-b"
+			>
+				<Form
+					classes={{
+						label: 'w-auto pr-2 h-min my-auto font-bold text-lg',
+						invalid: 'bg-red-700/80 text-white'
+					}}
+					bind:valid
+					onChange={(...args) => onChange(i, ...args)}
+					getRenderedItems={(...args) => getRenderedItems(i, ...args)}
+					onShow={(b) => {
+						console.log('onShow', b);
+					}}
+					onHide={(b) => {
+						console.log('onHide', b);
+					}}
+				></Form>
+			</div>
 		{/if}
 	{/each}
-	<!-- <Form -->
-	<!-- 	bind:valid -->
-	<!-- 	{onChange} -->
-	<!-- 	invalidBG={'bg-red-500'} -->
-	<!-- 	getRenderedItems={currentRenderForm} -->
-	<!-- 	onShow={(b) => { -->
-	<!-- 		console.log(b, 'JUST SHOWN'); -->
-	<!-- 	}} -->
-	<!-- 	onHide={(b) => { -->
-	<!-- 		console.log(b, 'JUST HIDDEN'); -->
-	<!-- 	}} -->
-	<!-- ></Form> -->
-	<!-- {/key} -->
 </div>
-<!-- {@render children()} -->
