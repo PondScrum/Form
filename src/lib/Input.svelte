@@ -106,6 +106,7 @@ onMount(() => {
 	const { onfocus, ...restEvents } = additionalEvents;
 	const requiredEvents = {
 		onfocus: (e: FocusEvent) => {
+		
 			if (isFocused) return;
 			isFocused = true;
 			causeInput(e.target as PossibleInputs);
@@ -113,7 +114,8 @@ onMount(() => {
 			focusedFromOutside = false;
 		},
 		onblur,
-		oninput
+		oninput,
+		onmouseleave
 	};
 
 	const combineEvents = Object.fromEntries(
@@ -129,7 +131,6 @@ onMount(() => {
 });
 
 function mounted(elem: PossibleInputs, customFN = null) {
-	console.log('a');
 	if (mount) mount(setValue);
 	if (inputType === 'inlineselect') {
 		lastSelectVal = initialValue;
@@ -176,12 +177,12 @@ const oninput: ChangeEventHandler<PossibleInputs> = (e) => {
 
 let tooltipShown = $state();
 const niceHTML = (c) =>
-	c && `<h1 class="text-base xl:text-lg capitalize py-1 tracking-tight">${c}</h1>`;
+	c && `<h1 class="text-base capitalize tracking-tight">${c}</h1>`;
 const wasLastTooltipShowing = () => $state.snapshot(untrack(() => tooltipShown));
 let tooltipParams = () => {
 	const res = {
 		id,
-		onShow: () => (tooltipShown = true),
+		onShown: () => (tooltipShown = true),
 		disabled: onlyValue,
 		content: niceHTML(tooltipContent),
 		trigger: 'mouseenter',
@@ -221,6 +222,9 @@ export const onblur = (e: FocusEvent) => {
 	isFocused = false;
 	causeInput(e.target as PossibleInputs);
 };
+const onmouseleave = ()=>{
+	tooltipShown=false
+}
 
 let focusedFromOutside = $state(false);
 let lastSelectVal = $state();
@@ -263,6 +267,17 @@ let lastSelectVal = $state();
 		<!-- 		backgroundColor={chosenBackgroundColor} -->
 		<!-- 		{events} -->
 		<!-- 	></Textarea> -->
+
+		{:else if inputType === 'textarea'}
+		<textarea
+		use:tooltip={tooltipParams}
+		use:mounted
+		{...events}
+		rows="12"
+		{id}
+		class=" {cls} {chosenBackgroundColor}"
+	></textarea>
+
 	{:else if inputType === 'boolean'}
 		<div class="flex h-full w-auto">
 			<input

@@ -33,6 +33,25 @@ let {
 type Event = (index: string, value: string, allValues: Record<string, string>) => void;
 const DEFAULT_INVALID_BG = 'bg-red-500';
 
+type InputProps = { index: string, inputType: string } & AdditionalInputProps;
+
+type AdditionalInputProps = {
+	input: {
+		class: string
+	};
+	label: {
+		class: string;
+		alias: string;
+		html: string;
+		hide?: true;
+
+	}
+	col?: true;
+	readonly?: true
+}
+
+
+
 function handleValidationResponse(res: ReturnType<Validate>, currentValue = '') {
 	const isValid = res.valid;
 	return {
@@ -45,7 +64,15 @@ function handleValidationResponse(res: ReturnType<Validate>, currentValue = '') 
 import Input from './Input.svelte';
 
 const defaultInputProps = {
-	cls: 'w-52 border h-8 rounded font-mono px-2'
+	input: {
+class: 'w-52 border h-8 rounded font-mono px-2'
+	},
+	label: {
+		hide: false,
+		alias: false,
+
+
+	}
 };
 
 type DataToAssign = string;
@@ -57,7 +84,6 @@ type Validate = (
 
 type AdditionalProps = {};
 
-type InputProps = { index: string } & Record<string, any>;
 type RenderType = 'group' | 'block';
 type GroupType = 'row' | 'col';
 type Block =
@@ -80,7 +106,7 @@ type Pivot = (index: string, ...Match: ReturnType<Match>[]) => Block;
 
 type Group = (...blocks: Block[]) => Block;
 
-const components = ['Text', 'Select', 'Date', 'InlineSelect', 'Col', 'Row', 'Boolean', 'Header'];
+const components = ['Text', 'Select', 'Date', 'InlineSelect', 'Col', 'Row', 'Boolean', 'Header','TextArea'];
 type ProvidedComponents = {
 	Text: StandardInput;
 	Select: OptionInput;
@@ -202,7 +228,7 @@ function setup() {
 				const header = (headerText) => ({
 					renderType: 'block',
 					component: 'header',
-					props: { header: headerText }
+					props: { index: headerText }
 				});
 				return [
 					type,
@@ -228,6 +254,7 @@ type BaseBlock = { renderType: 'block'; props: InputProps; component: Snippet };
 function collectBlocks(obj: Block): BaseBlock[] {
 	let allBlocks: BaseBlock[] = [];
 	if (!obj) return allBlocks;
+	if (typeof obj !== 'object') return [];
 	if ('blocks' in obj) {
 		const res = obj.blocks.map((e) => collectBlocks(e)).flat() as {
 			renderType: 'block';
@@ -378,36 +405,36 @@ const DEFAULT_LABEL_CLASS =
 	<div
 		in:scale={{ duration: 100, opacity: 0.98, start: 0.98 }}
 		class:flex-col={props.col}
-		class="flex py-4 text-sm"
+		class="flex text-sm {props.block?.class || classes.block}"
 	>
 		{#if Component === 'header'}
 			<p class="text-5xl font-medium">
-				{props.header}
+				{props.index}
+				<!-- {props.header} -->
 			</p>
 		{:else}
-			{#if !props.hideLabel || props.aliasLabel}
+			{@const { hide, alias, html } = props.label}
+			{#if !hide|| alias}
 				<label
 					for={props.inputType}
-					class="/my-auto {props.labelClass || classes.label || DEFAULT_LABEL_CLASS} "
+					class={props.label.class || classes.label || DEFAULT_LABEL_CLASS}
 				>
-					{#if props.labelHTML}
-						{@html props.labelHTML}
+					{#if html}
+						{@html html}
 					{:else}
-						{indexToHeader(props.aliasLabel || props?.index || '')}
+						{indexToHeader(alias || props?.index || '')}
 					{/if}
 				</label>
 			{/if}
-			<div class="flex min-h-8">
-				<div class="mx-auto my-auto max-h-8 overflow-hidden">
+				<div class="mx-auto my-auto max-h-24 overflow-hidden">
 					{#key forceRerender[props.index]}
 						<Component
 							bind:this={componentMap[props.index]}
-							cls={props.inputClass}
+							cls={props.input.class}
 							{...props}
 							disabled={props.readonly || disableMap[props.index]}
 						></Component>
 					{/key}
-				</div>
 			</div>
 		{/if}
 	</div>

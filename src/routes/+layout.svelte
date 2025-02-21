@@ -13,21 +13,34 @@ type GetRendered = ComponentProps<typeof Form>['getRenderedItems'];
 type OnChange = ComponentProps<typeof Form>['onChange'];
 
 const onChange: OnChange = (formNumber, allValues, lastInputInfo, methods) => {
+	values[formNumber] = allValues;
 	formVals[formNumber] = allValues;
 	if (
 		lastInputInfo.index === 'then' &&
 		lastInputInfo.value === 'and' &&
-		forms.length - 1 === formNumber
+		forms.length - 2 === formNumber
 	) {
 		forms.push(getRenderedItems);
-	}
+	};
 };
 
+const barebonesEX = (i, { Text,TextArea }, values) => {
+	const res =Array.from({ length: 5 }).map((e, i) => Text('field' + i, defValidate, {labelClass:'w-42'}));
+res.push(TextArea('textarea',defValidate,{cls:'border resize-none outline-none h-24 rounded p-1',labelClass:'w-42'}));
+return res;
+}
+
+
 const simpleFormEX: GetRendered = (
-	{ InlineSelect, Row, Col, Boolean, Pivot, Match, Text, Select, Header },
+	i,
+	{ InlineSelect, Row, Col, Boolean, Pivot, Match, Text, Select, Header, Date },
 	values
 ) => {
-	const normalText = Text('text', (a) => ({ valid: a === 'z', data: 'Error Msg ' + a }), {});
+	const normalText = Text(
+		'text',
+		(a) => ({ valid: a.length > 10, data: a.length < 10 ? 'Must be 10 or more characters' : a }),
+		{}
+	);
 	const dynamicSelect = Select(
 		'Select (dynamic options)',
 		defValidate,
@@ -35,12 +48,14 @@ const simpleFormEX: GetRendered = (
 		{}
 	);
 	return [
+		Header('Header'),
 		normalText,
 		Pivot(
 			'text',
 			Match(true, [
 				dynamicSelect,
-				InlineSelect('inline_select', defValidate, { '0': '0', '1': '1' }, {})
+				InlineSelect('inline_select', defValidate, { '0': '0', '1': '1' }, {}),
+				Date('date', defValidate, {})
 			])
 		)
 	];
@@ -76,8 +91,9 @@ const getRenderedItems: GetRendered = (
 		return Object.assign(equals, { lt: 'Less Than', gt: 'Greater Than' });
 	};
 	const indexSelect = Select('col', defValidate, colOptions, {
-		hideLabel: true,
-		aliasLabel: 'IF',
+		label: {
+			alias: 'IF',
+		},
 		key: 'colcmp'
 	});
 
@@ -90,22 +106,30 @@ const getRenderedItems: GetRendered = (
 			Match(true, [
 				Row(
 					InlineSelect(
-						'colcmp',
+						'cmp',
 						(...args) =>
-							isSelectorCol(values.col) ? { valid: true, data: 'Equals' } : defValidate(...args),
+							isSelectorCol(values.col) ? { valid: true, data: 'Equal' } : defValidate(...args),
 						cmpOptions(isSelectorCol(values.col)),
-						{ aliasLabel: 'Is' }
+						{ label:{alias: 'Is'} }
 					),
 					// Pivot('col',Match('frame_type',InlineSelect('colcmp',defValidate,cmpOptions(true),{})),Match('opening_height',InlineSelect('colcmp',defValidate,cmpOptions(false), { col: true, hideLabel: true }))),
 
 					Pivot(
 						//left off here, pivot needs to rerender when other item hidden
-						'colcmp',
+						'cmp',
 						Match(
 							['lt', 'gt'],
-							Boolean('Or Equal To?', defValidate, {
-								inputClass: 'mx-auto',
-								labelClass: 'text-nowrap pl-4 font-bold text-center underline',
+							Boolean('or_equal_to', defValidate, {
+								input: {
+									class: 'mx-auto mb-auto'
+								},
+								label: {
+									alias: 'Or Equal To?',
+								class: 'text-nowrap text-lg mt-auto pl-4 font-bold text-center ',
+								},
+								block: {
+								class: ''
+								},
 								col: true
 							})
 						)
@@ -120,21 +144,33 @@ const getRenderedItems: GetRendered = (
 						'valuesource',
 						defValidate,
 						{ tableval: 'Current Table Value', userval: 'Custom Value' },
-						{ aliasLabel: values.colcmp === 'equal' ? 'To a' : 'a' }
+						{ label: {alias: values.colcmp === 'Equal' ? 'To a' : 'a',class:'text-nowrap my-auto pr-2 text-lg'} }
 					),
 					Pivot(
 						'valuesource',
 						Match(
 							'userval',
 							isSelectorCol(values.col)
-								? createSelect('value', selectorOptions, { labelClass: 'e', labelHTML: arrowSVG })
-								: Text('value', defValidate, { labelClass: 'e', labelHTML: arrowSVG })
+								? createSelect('value', selectorOptions, {
+								label: {
+									class:'e',
+									html:arrowSVG
+								}
+							})
+								: Text('value', defValidate,  {
+								label: {
+									class:'e',
+									html:arrowSVG
+								}
+							})
 						),
 						Match(
 							'tableval',
 							createSelect('Table Column Cell Value', colOptions, {
-								labelClass: 'e',
-								labelHTML: arrowSVG
+								label: {
+									class:'e',
+									html:arrowSVG
+								}
 							})
 						)
 					)
@@ -152,41 +188,99 @@ const getRenderedItems: GetRendered = (
 		)
 	];
 };
-let valid = $state();
+let valid = $state({});
 
-let forms = $state([getRenderedItems]);
+let forms = $state(['a', getRenderedItems]);
 
 let formVals = $state({});
+
+let values = $state({});
+
+$inspect(forms);
 </script>
 
-<p class="p-4">
-	bindable overall form validity:<b>{valid}</b>
-</p>
+<div class="flex max-h-[100svh] flex-col">
+	<div class="flex h-52 max-h-52 overflow-hidden">
+	<div>
+		<p class="p-2 text-center text-xl">bindable overall form validity:</p>
+		<p class="text-center text-2xl font-bold">{Object.values(valid).every((e) => e)}</p>
+	</div>
 
-<div class="p-8">
-	<!-- {#key currentRenderForm} -->
-	{#each forms as getRenderedItems, i (i)}
-		{#if i === 0 || formVals[i - 1]?.then === 'and'}
-			<div
-				style="padding: {i + 2}rem; padding-top:1rem; padding-bottom: 0rem;"
-				class="mx-auto w-3/4 overflow-auto font-bold first:border-t last:border-b"
-			>
-				<Form
-					classes={{
-						label: 'w-auto pr-2 h-min my-auto font-bold text-lg',
-						invalid: 'bg-red-700/80 text-white'
-					}}
-					bind:valid
-					onChange={(...args) => onChange(i, ...args)}
-					getRenderedItems={(...args) => getRenderedItems(i, ...args)}
-					onShow={(b) => {
-						console.log('onShow', b);
-					}}
-					onHide={(b) => {
-						console.log('onHide', b);
-					}}
-				></Form>
-			</div>
-		{/if}
-	{/each}
+		<div class="max-h-full grow overflow-auto border-l p-2 px-4">
+			<p class="text-lg font-bold">All Values</p>
+
+			{#each Object.values(values) as value}
+				<p class="whitespace-pre">
+					{JSON.stringify(value, null, '\t')}
+				</p>
+			{/each}
+		</div>
+
+		<p class="w-64">
+			{forms[0]}
+		</p>
+	</div>
+
+	<div
+		class="flex justify-center text-xl font-medium *:mx-1 *:rounded-sm *:border *:p-2 *:capitalize"
+	>
+		<button
+			onclick={() => {
+				forms = [
+					`
+const barebonesEX = ({Text},values)=>{
+	return Array.from({length:5}).map((e,i)=>Text('field'+i,defValidate,{})) 
+}
+		`,
+					barebonesEX
+				];
+			}}
+		>
+			barebones
+		</button>
+		<button
+			onclick={() => {
+				forms = ['z', simpleFormEX];
+			}}
+		>
+			simple
+		</button>
+
+		<button
+			onclick={() => {
+				forms = ['p', getRenderedItems];
+			}}
+		>
+			Advanced
+		</button>
+	</div>
+	<div class="mt-6 grow overflow-auto border-t p-8 pt-2">
+		{#key forms[0]}
+			{#each forms.slice(1, forms.length) as getRenderedItems, i (i)}
+				{#if i === 0 || formVals[i - 1]?.then === 'and'}
+					<div
+						style="padding: {i + 2}rem; padding-top:1rem; padding-bottom: 0rem;"
+						class="mx-auto w-3/4 overflow-auto border-x font-bold first:border-t last:border-b"
+					>
+						<Form
+							classes={{
+								label: 'w-auto pr-2 h-min my-auto font-bold text-lg',
+								invalid: 'bg-red-700/80 text-white',
+								block: 'min-h-22'
+							}}
+							bind:valid={valid[i]}
+							onChange={(...args) => onChange(i, ...args)}
+							getRenderedItems={(...args) => getRenderedItems(i, ...args)}
+							onShow={(b) => {
+								console.log('onShow', b);
+							}}
+							onHide={(b) => {
+								console.log('onHide', b);
+							}}
+						></Form>
+					</div>
+				{/if}
+			{/each}
+		{/key}
+	</div>
 </div>
