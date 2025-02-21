@@ -9,21 +9,25 @@ let { children } = $props();
 
 const defValidate = (a, b) => ({ valid: Boolean(a), data: Boolean(a) ? a : 'must have a value' });
 
-type GetRendered = ComponentProps<typeof Form>['getRenderedItems'];
-type OnChange = ComponentProps<typeof Form>['onChange'];
+// type GetRendered = ComponentProps<typeof Form>['getRenderedItems'];
+// type OnChange = ComponentProps<typeof Form>['onChange'];
 
-const onChange: OnChange = (formNumber, allValues, lastInputInfo, methods) => {
-	values[formNumber] = allValues;
-	formVals[formNumber] = allValues;
-	if (
-		lastInputInfo.index === 'then' &&
-		lastInputInfo.value === 'and' &&
-		forms.length - 2 === formNumber
-	) {
-		forms.push(getRenderedItems);
-	}
+import type { OnChange, GetRenderedItems } from '../lib/types/public.ts';
+
+const wrapOnChange = (formNumber: number) => {
+	const onChange: OnChange = (allValues, lastInputInfo, methods) => {
+		values[formNumber] = allValues;
+		formVals[formNumber] = allValues;
+		if (
+			lastInputInfo.index === 'then' &&
+			lastInputInfo.value === 'and' &&
+			forms.length - 2 === formNumber
+		) {
+			forms.push(getRenderedItems);
+		}
+	};
+	return onChange;
 };
-
 const barebonesEX = (i, { Text, TextArea }, values) => {
 	const res = Array.from({ length: 5 }).map((e, i) =>
 		Text('field' + i, defValidate, { labelClass: 'w-42' })
@@ -37,7 +41,7 @@ const barebonesEX = (i, { Text, TextArea }, values) => {
 	return res;
 };
 
-const simpleFormEX: GetRendered = (
+const simpleFormEX: GetRenderedItems = (
 	i,
 	{ InlineSelect, Row, Col, Boolean, Pivot, Match, Text, Select, Header, Date },
 	values
@@ -281,7 +285,7 @@ const barebonesEX = ({Text},values)=>{
 								block: 'min-h-22'
 							}}
 							bind:valid={valid[i]}
-							onChange={(...args) => onChange(i, ...args)}
+							onChange={wrapOnChange(i)}
 							getRenderedItems={(...args) => getRenderedItems(i, ...args)}
 							onShow={(b) => {}}
 							onHide={(b) => {}}
