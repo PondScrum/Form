@@ -21,15 +21,21 @@ const onChange: OnChange = (formNumber, allValues, lastInputInfo, methods) => {
 		forms.length - 2 === formNumber
 	) {
 		forms.push(getRenderedItems);
-	};
+	}
 };
 
-const barebonesEX = (i, { Text,TextArea }, values) => {
-	const res =Array.from({ length: 5 }).map((e, i) => Text('field' + i, defValidate, {labelClass:'w-42'}));
-res.push(TextArea('textarea',defValidate,{cls:'border resize-none outline-none h-24 rounded p-1',labelClass:'w-42'}));
-return res;
-}
-
+const barebonesEX = (i, { Text, TextArea }, values) => {
+	const res = Array.from({ length: 5 }).map((e, i) =>
+		Text('field' + i, defValidate, { labelClass: 'w-42' })
+	);
+	res.push(
+		TextArea('textarea', defValidate, {
+			cls: 'border resize-none outline-none h-24 rounded p-1',
+			labelClass: 'w-42'
+		})
+	);
+	return res;
+};
 
 const simpleFormEX: GetRendered = (
 	i,
@@ -92,7 +98,7 @@ const getRenderedItems: GetRendered = (
 	};
 	const indexSelect = Select('col', defValidate, colOptions, {
 		label: {
-			alias: 'IF',
+			alias: 'IF'
 		},
 		key: 'colcmp'
 	});
@@ -110,7 +116,7 @@ const getRenderedItems: GetRendered = (
 						(...args) =>
 							isSelectorCol(values.col) ? { valid: true, data: 'Equal' } : defValidate(...args),
 						cmpOptions(isSelectorCol(values.col)),
-						{ label:{alias: 'Is'} }
+						{ label: { alias: 'Is' } }
 					),
 					// Pivot('col',Match('frame_type',InlineSelect('colcmp',defValidate,cmpOptions(true),{})),Match('opening_height',InlineSelect('colcmp',defValidate,cmpOptions(false), { col: true, hideLabel: true }))),
 
@@ -125,10 +131,10 @@ const getRenderedItems: GetRendered = (
 								},
 								label: {
 									alias: 'Or Equal To?',
-								class: 'text-nowrap text-lg mt-auto pl-4 font-bold text-center ',
+									class: 'text-nowrap text-lg mt-auto pl-4 font-bold text-center '
 								},
 								block: {
-								class: ''
+									class: ''
 								},
 								col: true
 							})
@@ -144,7 +150,12 @@ const getRenderedItems: GetRendered = (
 						'valuesource',
 						defValidate,
 						{ tableval: 'Current Table Value', userval: 'Custom Value' },
-						{ label: {alias: values.colcmp === 'Equal' ? 'To a' : 'a',class:'text-nowrap my-auto pr-2 text-lg'} }
+						{
+							label: {
+								alias: values.colcmp === 'Equal' ? 'To a' : 'a',
+								class: 'text-nowrap my-auto pr-2 text-lg'
+							}
+						}
 					),
 					Pivot(
 						'valuesource',
@@ -152,24 +163,24 @@ const getRenderedItems: GetRendered = (
 							'userval',
 							isSelectorCol(values.col)
 								? createSelect('value', selectorOptions, {
-								label: {
-									class:'e',
-									html:arrowSVG
-								}
-							})
-								: Text('value', defValidate,  {
-								label: {
-									class:'e',
-									html:arrowSVG
-								}
-							})
+										label: {
+											class: 'e',
+											html: arrowSVG
+										}
+									})
+								: Text('value', defValidate, {
+										label: {
+											class: 'e',
+											html: arrowSVG
+										}
+									})
 						),
 						Match(
 							'tableval',
 							createSelect('Table Column Cell Value', colOptions, {
 								label: {
-									class:'e',
-									html:arrowSVG
+									class: 'e',
+									html: arrowSVG
 								}
 							})
 						)
@@ -201,10 +212,10 @@ $inspect(forms);
 
 <div class="flex max-h-[100svh] flex-col">
 	<div class="flex h-52 max-h-52 overflow-hidden">
-	<div>
-		<p class="p-2 text-center text-xl">bindable overall form validity:</p>
-		<p class="text-center text-2xl font-bold">{Object.values(valid).every((e) => e)}</p>
-	</div>
+		<div>
+			<p class="p-2 text-center text-xl">bindable overall form validity:</p>
+			<p class="text-center text-2xl font-bold">{Object.values(valid).every((e) => e)}</p>
+		</div>
 
 		<div class="max-h-full grow overflow-auto border-l p-2 px-4">
 			<p class="text-lg font-bold">All Values</p>
@@ -263,6 +274,7 @@ const barebonesEX = ({Text},values)=>{
 						class="mx-auto w-3/4 overflow-auto border-x font-bold first:border-t last:border-b"
 					>
 						<Form
+							deleteOnHide={true}
 							classes={{
 								label: 'w-auto pr-2 h-min my-auto font-bold text-lg',
 								invalid: 'bg-red-700/80 text-white',
@@ -271,12 +283,8 @@ const barebonesEX = ({Text},values)=>{
 							bind:valid={valid[i]}
 							onChange={(...args) => onChange(i, ...args)}
 							getRenderedItems={(...args) => getRenderedItems(i, ...args)}
-							onShow={(b) => {
-								console.log('onShow', b);
-							}}
-							onHide={(b) => {
-								console.log('onHide', b);
-							}}
+							onShow={(b) => {}}
+							onHide={(b) => {}}
 						></Form>
 					</div>
 				{/if}

@@ -106,7 +106,6 @@ onMount(() => {
 	const { onfocus, ...restEvents } = additionalEvents;
 	const requiredEvents = {
 		onfocus: (e: FocusEvent) => {
-		
 			if (isFocused) return;
 			isFocused = true;
 			causeInput(e.target as PossibleInputs);
@@ -140,7 +139,6 @@ function mounted(elem: PossibleInputs, customFN = null) {
 		return;
 	}
 	//tick
-	console.log('valuechanged', id, initialValue);
 	handleResult(valueChanged(initialValue || '', isFocused), elem);
 	customFN && customFN();
 }
@@ -156,7 +154,6 @@ function handleResult(result: string | FormValidationReturn<string>, target: Pos
 	}
 	result = result as FormValidationReturn<string>;
 	target[indexer] = result.value;
-	console.log(result.background_color);
 	resultBackgroundColor = result.background_color;
 	tooltipContent = result.tooltip;
 }
@@ -176,8 +173,7 @@ const oninput: ChangeEventHandler<PossibleInputs> = (e) => {
 };
 
 let tooltipShown = $state();
-const niceHTML = (c) =>
-	c && `<h1 class="text-base capitalize tracking-tight">${c}</h1>`;
+const niceHTML = (c) => c && `<h1 class="text-base capitalize tracking-tight">${c}</h1>`;
 const wasLastTooltipShowing = () => $state.snapshot(untrack(() => tooltipShown));
 let tooltipParams = () => {
 	const res = {
@@ -222,9 +218,9 @@ export const onblur = (e: FocusEvent) => {
 	isFocused = false;
 	causeInput(e.target as PossibleInputs);
 };
-const onmouseleave = ()=>{
-	tooltipShown=false
-}
+const onmouseleave = () => {
+	tooltipShown = false;
+};
 
 let focusedFromOutside = $state(false);
 let lastSelectVal = $state();
@@ -267,17 +263,15 @@ let lastSelectVal = $state();
 		<!-- 		backgroundColor={chosenBackgroundColor} -->
 		<!-- 		{events} -->
 		<!-- 	></Textarea> -->
-
-		{:else if inputType === 'textarea'}
+	{:else if inputType === 'textarea'}
 		<textarea
-		use:tooltip={tooltipParams}
-		use:mounted
-		{...events}
-		rows="12"
-		{id}
-		class=" {cls} {chosenBackgroundColor}"
-	></textarea>
-
+			use:tooltip={tooltipParams}
+			use:mounted
+			{...events}
+			rows="12"
+			{id}
+			class=" {cls} {chosenBackgroundColor}"
+		></textarea>
 	{:else if inputType === 'boolean'}
 		<div class="flex h-full w-auto">
 			<input
