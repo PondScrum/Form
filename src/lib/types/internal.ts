@@ -1,5 +1,5 @@
 import type { Snippet, SvelteComponent } from 'svelte';
-export type { Props } from '$lib/types/public.js';
+export type { Props } from '$lib/types/public.ts';
 
 export type AdditionalInputProps = {
 	key: string;
