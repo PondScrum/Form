@@ -1,4 +1,4 @@
-import type { Block, ProvidedComponents, ValidityEvent, VisibilityEvent } from './internal.ts';
+import type { Block, ProvidedComponents, ValidityEvent, VisibilityEvent } from './internal';
 
 export type ProvidedMethods = {
 	setInternalValue: (index: string, valid: string) => void;
