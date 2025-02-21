@@ -235,7 +235,7 @@ function inputChanged(
 	validate: Validate,
 	props: InputProps
 ) {
-	const readonly = readonly || props?.readonly;
+	const RO = readonly || props?.readonly;
 	try {
 		index = index.toLowerCase();
 		if (props.key && value !== allValues[index]) {
@@ -248,7 +248,7 @@ function inputChanged(
 			);
 		}
 		let validationRes = { valid: true, data: value };
-		if (!readonly) {
+		if (!RO) {
 			validationRes = validate(value, focused);
 			// if (preOnChange) {
 			// 	const { exportRes, relevantRes } = preOnChange({ index, value, exp, relevant });
@@ -264,7 +264,7 @@ function inputChanged(
 		allValues[index] = convertedResponse.value;
 
 		const eventToRun = events[validationRes.valid ? 'valid' : 'error'];
-		!readonly && eventToRun && eventToRun(index, validationRes.data);
+		!RO && eventToRun && eventToRun(index, validationRes.data);
 		tick().then(() => {
 			render();
 			onChange(
