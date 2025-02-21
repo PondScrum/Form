@@ -29,6 +29,7 @@ export interface Props {
 		show: VisibilityEvent;
 	}>;
 	classes: {
+		input: string;
 		label: string;
 		invalid: string;
 		block: string;

@@ -43,7 +43,7 @@ import Input from './Input.svelte';
 
 const defaultInputProps = {
 	input: {
-		class: 'w-52 border h-8 rounded font-mono px-2'
+		class: `w-52 h-8 rounded font-mono px-2 ${classes.border && 'border ' + classes.border}`
 	},
 	label: {
 		hide: false,
@@ -205,6 +205,7 @@ function collectBlocks(obj: Block): BaseBlock[] {
 	} else if (obj.renderType === 'block') {
 		allBlocks = [...allBlocks, obj];
 		return allBlocks as { renderType: 'block'; props: InputProps; component: Snippet }[];
+		allblocks;
 	}
 	return [];
 }
@@ -220,7 +221,6 @@ function provideAllValues() {
 	const res = structuredClone($state.snapshot(allValues));
 	if (deleteOnHide) {
 		Object.keys(hidden).forEach((e) => {
-			console.log(res, e);
 			delete res[e];
 		});
 	}
@@ -314,7 +314,7 @@ function indexToHeader(str: string) {
 		.join(' ');
 }
 let componentMap: Record<string, InputComponentPublicFns> = $state({});
-setContext('border', classes.border)
+setContext('border', classes.border);
 </script>
 
 {#snippet handleArr(items: Block[])}
@@ -373,7 +373,7 @@ setContext('border', classes.border)
 				{#key forceRerender[props.index]}
 					<Component
 						bind:this={componentMap[props.index]}
-						cls={props.input.class}
+						cls={props.input.class || classes.input}
 						{...props}
 						disabled={props.readonly || disableMap[props.index]}
 					></Component>
@@ -384,7 +384,11 @@ setContext('border', classes.border)
 {/snippet}
 
 {#snippet Group(type: GroupType, blocks: Block[])}
-	<div class:border-t={classes.border} class:flex-col={type === 'col'} class="flex {classes.border}">
+	<div
+		class:border-t={classes.border}
+		class:flex-col={type === 'col'}
+		class="flex {classes.border}"
+	>
 		{#each blocks as block, i (i)}
 			{#if block}
 				{#if block.renderType === 'block'}

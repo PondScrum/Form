@@ -224,7 +224,7 @@ const onmouseleave = () => {
 
 let focusedFromOutside = $state(false);
 let lastSelectVal = $state();
-const border = getContext('border')
+const border = getContext('border');
 </script>
 
 {#if events}
@@ -311,7 +311,8 @@ const border = getContext('border')
 			class="flex text-nowrap"
 		>
 			<div
-				class="flex justify-end {border && border + ' border'} divide-x divide-zinc-500 overflow-hidden rounded text-base"
+				class="flex justify-end {border &&
+					border + ' border *:border-l *:first:border-l-0'} overflow-hidden rounded text-base"
 			>
 				<!-- fix this class:text-white, conflicting with chosenbackgroundcolor -->
 				{#each Object.entries(options) as [choice, displayChoice], i}
