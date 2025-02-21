@@ -16,6 +16,7 @@ export type GetRenderedItems = (
 ) => Block[];
 
 export interface Props {
+	readonly: boolean;
 	valid: boolean;
 	deleteOnHide: boolean;
 	onJSError: (e: Error) => void;

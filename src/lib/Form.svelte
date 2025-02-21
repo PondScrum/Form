@@ -14,6 +14,7 @@ import type {
 } from './types/internal.ts';
 
 let {
+	readonly = false,
 	deleteOnHide = false,
 	valid = $bindable(),
 	onJSError,
@@ -234,7 +235,7 @@ function inputChanged(
 	validate: Validate,
 	props: InputProps
 ) {
-	const readonly = props?.readonly;
+	const readonly = readonly || props?.readonly;
 	try {
 		index = index.toLowerCase();
 		if (props.key && value !== allValues[index]) {
@@ -286,7 +287,15 @@ let wrappedComponents: ProvidedComponents;
 
 export function setInternalValue(index: string, value: string) {
 	tick().then(() => {
-		componentMap[index].setValue(value);
+		const component = componentMap[index];
+		if (!component) {
+			console.log(
+				`Index does not exist as provided render item, force setting value: ${value} at index ${index}`
+			);
+			inputChanged(index, value, true, (a) => ({ valid: true, data: a }), {});
+			return;
+		}
+		componentMap[index]?.setValue(value);
 	});
 }
 
@@ -375,7 +384,7 @@ setContext('border', classes.border);
 						bind:this={componentMap[props.index]}
 						cls={props.input.class || classes.input}
 						{...props}
-						disabled={props.readonly || disableMap[props.index]}
+						disabled={readonly || props.readonly || disableMap[props.index]}
 					></Component>
 				{/key}
 			</div>

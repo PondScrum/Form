@@ -2,7 +2,6 @@
 import 'tippy.js/animations/scale-subtle.css';
 import 'tippy.js/dist/tippy.css';
 
-
 import type { ComponentProps } from 'svelte';
 import Form from '$lib/Form.svelte';
 import '../app.css';
