@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount, tick, type Snippet } from 'svelte';
+import { onMount, setContext, tick, type Snippet } from 'svelte';
 import { scale } from 'svelte/transition';
 import type {
 	BaseBlock,
@@ -314,6 +314,7 @@ function indexToHeader(str: string) {
 		.join(' ');
 }
 let componentMap: Record<string, InputComponentPublicFns> = $state({});
+setContext('border', classes.border)
 </script>
 
 {#snippet handleArr(items: Block[])}
@@ -383,7 +384,7 @@ let componentMap: Record<string, InputComponentPublicFns> = $state({});
 {/snippet}
 
 {#snippet Group(type: GroupType, blocks: Block[])}
-	<div class:border-t={true} class:flex-col={type === 'col'} class="flex">
+	<div class:border-t={classes.border} class:flex-col={type === 'col'} class="flex {classes.border}">
 		{#each blocks as block, i (i)}
 			{#if block}
 				{#if block.renderType === 'block'}

@@ -87,7 +87,7 @@ let chosenBackgroundColor = $derived((useResultBG && resultBackgroundColor) || b
 let isFocused: boolean = $state(false);
 
 export function setValue(value: string) {
-	if (inputType === 'inlineselect') {
+	if (inputType.split('_')[0] === 'inlineselect') {
 		lastSelectVal = initialValue;
 	}
 	handleResult(valueChanged(value, false), document.getElementById(id) as PossibleInputs);
@@ -224,6 +224,7 @@ const onmouseleave = () => {
 
 let focusedFromOutside = $state(false);
 let lastSelectVal = $state();
+const border = getContext('border')
 </script>
 
 {#if events}
@@ -310,7 +311,7 @@ let lastSelectVal = $state();
 			class="flex text-nowrap"
 		>
 			<div
-				class="flex justify-end divide-x divide-zinc-500 overflow-hidden rounded border-gray-500 text-base lg:h-8"
+				class="flex justify-end {border && border + ' border'} divide-x divide-zinc-500 overflow-hidden rounded text-base"
 			>
 				<!-- fix this class:text-white, conflicting with chosenbackgroundcolor -->
 				{#each Object.entries(options) as [choice, displayChoice], i}
@@ -331,7 +332,7 @@ let lastSelectVal = $state();
 						<!-- <p>{indexToHeader(tooltipType ? choice : displayChoice)}</p> -->
 						{#key lastSelectVal != choice}
 							<p
-								class="my-auto h-min"
+								class="my-auto h-min capitalize"
 								use:singleton_tooltip={() => ({
 									id: choice,
 									content: tooltipType && niceHTML(displayChoice)

@@ -18,6 +18,7 @@ const wrapOnChange = (formNumber: number) => {
 	const onChange: OnChange = (allValues, lastInputInfo, methods) => {
 		values[formNumber] = allValues;
 		formVals[formNumber] = allValues;
+		lastInputInfo.index === 'field0' && methods.setInternalValue('field1','z')
 		if (
 			lastInputInfo.index === 'then' &&
 			lastInputInfo.value === 'and' &&
@@ -25,6 +26,7 @@ const wrapOnChange = (formNumber: number) => {
 		) {
 			forms.push(getRenderedItems);
 		}
+			console.log(allBlocks);
 	};
 	return onChange;
 };
@@ -64,7 +66,7 @@ const simpleFormEX: GetRenderedItems = (
 			'text',
 			Match(true, [
 				dynamicSelect,
-				InlineSelect('inline_select', defValidate, { '0': '0', '1': '1' }, {}),
+				InlineSelect('inline_select', defValidate, { '0': '0', '1': '1' }, {input:{class:'a w-52'}}),
 				Date('date', defValidate, {})
 			])
 		)
@@ -282,13 +284,15 @@ const barebonesEX = ({Text},values)=>{
 							classes={{
 								label: 'w-auto pr-2 h-min my-auto font-bold text-lg',
 								invalid: 'bg-red-700/80 text-white',
-								block: 'min-h-22'
+									block: 'min-h-22',
+									border: 'border-gray-500'
 							}}
 							bind:valid={valid[i]}
 							onChange={wrapOnChange(i)}
 							getRenderedItems={(...args) => getRenderedItems(i, ...args)}
-							onShow={(b) => {}}
-							onHide={(b) => {}}
+events={{
+	hide: (i)=>console.log(i)
+}}
 						></Form>
 					</div>
 				{/if}
