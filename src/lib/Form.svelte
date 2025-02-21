@@ -1,63 +1,41 @@
 <script lang="ts">
 import { onMount, tick, type Snippet } from 'svelte';
 import { scale } from 'svelte/transition';
+import type {
+	BaseBlock,
+	Block,
+	GroupType,
+	InputComponentPublicFns,
+	InputProps,
+	Pivot,
+	Props,
+	ProvidedComponents,
+	Validate
+} from './types.ts';
 
-interface Props {
-	valid: boolean;
-	onJSError: (e: Error) => void;
-	getRenderedItems: (components: ProvidedComponents, allValues: Record<string, string>) => Block[];
-	onChange: (
-		allValues: Record<string, string>,
-		lastInputInfo: { index: string; value: string; focused: boolean },
-		methods: ProvidedMethods
-	) => void;
-	initialValues: Record<string, string>;
-	onError?: Event;
-	onValid?: Event;
-	onHide?: Event;
-	onShow?: Event;
-}
 let {
-	deleteOnHide,
+	deleteOnHide = false,
 	valid = $bindable(),
 	onJSError,
 	getRenderedItems,
 	onChange,
+	events = {},
 	initialValues,
-	onError,
-	onValid,
-	onHide,
-	onShow,
-	classes = {}
+	classes = {
+		block: '',
+		invalid: 'bg-red-500',
+		label: 'h-min min-w-36 pr-4 text-lg font-medium text-wrap capitalize lg:min-w-44 xl:text-2xl'
+	}
 }: Props = $props();
 
 //deleteOnHide prop should delete the values at allValue provide time, so it doesnt wipe for users, only on consumption
-
-type Event = (index: string, value: string, allValues: Record<string, string>) => void;
-const DEFAULT_INVALID_BG = 'bg-red-500';
-
-type InputProps = { index: string; inputType: string } & AdditionalInputProps;
-
-type AdditionalInputProps = {
-	input: {
-		class: string;
-	};
-	label: {
-		class: string;
-		alias: string;
-		html: string;
-		hide?: true;
-	};
-	col?: true;
-	readonly?: true;
-};
 
 function handleValidationResponse(res: ReturnType<Validate>, currentValue = '') {
 	const isValid = res.valid;
 	return {
 		value: isValid ? res.data : currentValue,
 		tooltip: isValid ? '' : res.data,
-		background_color: isValid ? '' : classes.invalid || DEFAULT_INVALID_BG
+		background_color: isValid ? '' : classes.invalid
 	};
 }
 
@@ -73,37 +51,6 @@ const defaultInputProps = {
 	}
 };
 
-type DataToAssign = string;
-type TooltipMessage = string;
-type Validate = (
-	value: string,
-	focused: boolean
-) => { valid: true; data: DataToAssign } | { valid: false; data: TooltipMessage };
-
-type AdditionalProps = {};
-
-type RenderType = 'group' | 'block';
-type GroupType = 'row' | 'col';
-type Block =
-	| undefined
-	| { renderType: 'block'; props: InputProps; component: Snippet }
-	| { renderType: 'group'; type: GroupType; blocks: Block[] };
-type SelectOptions = Record<string, string>;
-
-type StandardInput = (index: string, validate: Validate, props: AdditionalProps) => Block;
-type OptionInput = (
-	index: string,
-	validate: Validate,
-	options: SelectOptions,
-	props: AdditionalProps
-) => Block;
-
-type Match = (value: boolean | string, block: Block | Block[]) => (index: string) => Block[];
-
-type Pivot = (index: string, ...Match: ReturnType<Match>[]) => Block;
-
-type Group = (...blocks: Block[]) => Block;
-
 const components = [
 	'Text',
 	'Select',
@@ -115,28 +62,13 @@ const components = [
 	'Header',
 	'TextArea'
 ];
-type ProvidedComponents = {
-	Text: StandardInput;
-	Select: OptionInput;
-	Date: StandardInput;
-	InlineSelect: OptionInput;
-	Boolean: StandardInput;
-	Col: Block;
-	Row: Block;
-	Pivot: Pivot;
-	Match: Match;
-};
-type ProvidedMethods = {
-	setInternalValue: (index: string, valid: string) => void;
-	setDisabled: (index: string, state: boolean) => void;
-};
 
 let pivots: Record<string, Record<string, Block[]>> = $state({});
 let allValues = $state(initialValues || {});
 let renderedComponents: Block[] = $state([]);
 // let hidden: string[] = $state([]);
 
-let hidden = $state({});
+let hidden: Record<string, boolean> = $state({});
 
 const match: Match = (value: string | boolean, block: Block | Block[]) => {
 	let usedBool = typeof value === 'boolean';
@@ -147,8 +79,8 @@ const match: Match = (value: string | boolean, block: Block | Block[]) => {
 	return (valueIndex: string) => {
 		pivots[valueIndex] ??= {};
 		pivots[valueIndex][uid] = blocks; // or block?
-		const show = (index) => {
-			hidden[index] && onShow(index);
+		const show = (index: string) => {
+			hidden[index] && events.show?.(index);
 			delete hidden[index];
 		};
 		const allBlocks = blocks
@@ -166,11 +98,11 @@ const match: Match = (value: string | boolean, block: Block | Block[]) => {
 			allBlocks.forEach((b) => show(b.props.index));
 			return blocks;
 		}
-		const hide = (index) => {
+		const hide = (index: string) => {
 			if (!hidden[index]) {
 				hidden[index] = true;
-				//setInternalValue(index,'');
-				onHide?.(index);
+				// setInternalValue(index,'');
+				events.hide?.(index);
 				return index;
 			}
 		};
@@ -186,7 +118,7 @@ const pivot: Pivot = (valueIndex, ...matches) => {
 		.filter((e) => e)
 		.flat();
 
-	const flatten = (items: any[]) =>
+	const flatten = (items: Block[]) =>
 		items.every((e) => e.renderType) ? items : flatten(items.flat());
 	return flatten(res);
 };
@@ -217,7 +149,8 @@ function setup() {
 					const options = args[0];
 					props.options = options;
 					index = index.toLowerCase();
-					const oc = (value, focused) => inputChanged(index, value, focused, validate, props);
+					const oc = (value: string, focused: boolean) =>
+						inputChanged(index, value, focused, validate, props);
 					const res = {
 						renderType: 'block',
 						component: Input,
@@ -233,7 +166,7 @@ function setup() {
 					};
 					return res;
 				};
-				const header = (headerText) => ({
+				const header = (headerText: string) => ({
 					renderType: 'block',
 					component: 'header',
 					props: { index: headerText }
@@ -258,7 +191,6 @@ onMount(() => {
 	tick().then(render);
 });
 
-type BaseBlock = { renderType: 'block'; props: InputProps; component: Snippet };
 function collectBlocks(obj: Block): BaseBlock[] {
 	let allBlocks: BaseBlock[] = [];
 	if (!obj) return allBlocks;
@@ -277,7 +209,7 @@ function collectBlocks(obj: Block): BaseBlock[] {
 	return [];
 }
 
-let validityMap = $state({});
+let validityMap: Record<string, boolean> = $state({});
 
 function determineValidity() {
 	const nonHiddenFields = Object.keys(allValues).filter((e) => !(e in hidden));
@@ -330,8 +262,8 @@ function inputChanged(
 
 		allValues[index] = convertedResponse.value;
 
-		const eventToRun = validationRes.valid ? onValid : onError;
-		!readonly && eventToRun && eventToRun(index, validationRes.data, allValues);
+		const eventToRun = events[validationRes.valid ? 'valid' : 'error'];
+		!readonly && eventToRun && eventToRun(index, validationRes.data);
 		tick().then(() => {
 			render();
 			onChange(
@@ -346,7 +278,7 @@ function inputChanged(
 	} catch (e) {
 		console.error(index);
 		console.error(e);
-		onJSError?.(e);
+		if (e instanceof Error) onJSError?.(e);
 	}
 }
 
@@ -381,9 +313,7 @@ function indexToHeader(str: string) {
 		})
 		.join(' ');
 }
-let componentMap = $state({});
-const DEFAULT_LABEL_CLASS =
-	'h-min min-w-36 pr-4 text-lg font-medium text-wrap capitalize lg:min-w-44 xl:text-2xl';
+let componentMap: Record<string, InputComponentPublicFns> = $state({});
 </script>
 
 {#snippet handleArr(items: Block[])}
@@ -430,10 +360,7 @@ const DEFAULT_LABEL_CLASS =
 		{:else}
 			{@const { hide, alias, html } = props.label}
 			{#if !hide || alias}
-				<label
-					for={props.inputType}
-					class={props.label.class || classes.label || DEFAULT_LABEL_CLASS}
-				>
+				<label for={props.inputType} class={props.label.class || classes.label}>
 					{#if html}
 						{@html html}
 					{:else}
