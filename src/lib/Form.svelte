@@ -11,7 +11,7 @@ import type {
 	Props,
 	ProvidedComponents,
 	Validate
-} from './types.ts';
+} from './types/internal.ts';
 
 let {
 	deleteOnHide = false,
