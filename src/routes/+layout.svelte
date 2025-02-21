@@ -1,6 +1,8 @@
 <script lang="ts">
 import 'tippy.js/animations/scale-subtle.css';
 import 'tippy.js/dist/tippy.css';
+import {default as Z} from '../../dist/index.js'
+
 
 import type { ComponentProps } from 'svelte';
 import Form from '$lib/Form.svelte';

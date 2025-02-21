@@ -1,1 +1,1 @@
-export * from './types/public.js';
+export * from 'types/public.ts';
