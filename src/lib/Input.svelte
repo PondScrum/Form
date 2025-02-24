@@ -312,20 +312,24 @@ const border = getContext('border');
 		>
 			<div
 				class="flex justify-end {border &&
-					border + ' border *:border-l *:first:border-l-0'} overflow-hidden rounded text-base"
+					border + '  border *:border-r  *:last:border-r-0 '}  overflow-hidden rounded text-base"
 			>
 				<!-- fix this class:text-white, conflicting with chosenbackgroundcolor -->
 				{#each Object.entries(options) as [choice, displayChoice], i}
 					<button
 						tabindex={disabled ? -1 : tabindex}
 						{disabled}
-						class:bg-blue-500={lastSelectVal === choice}
-						class:text-white={lastSelectVal === choice || tooltipContent}
 						id={id + '-' + i}
-						class=" {cls} a {chosenBackgroundColor} "
+						class={{
+							[`border-r bg-blue-500 last:border-r-0 ${border}`]: lastSelectVal === choice,
+							'text-white': lastSelectVal === choice || tooltipContent,
+							[cls]: true,
+							[chosenBackgroundColor]: true
+						}}
 						onmouseleave={singleton.enable}
 						onmousedown={singleton.disable}
 						onclick={(e) => {
+							if (disabled) return;
 							lastSelectVal = choice;
 							handleResult(valueChanged(choice, isFocused), {});
 						}}
@@ -338,7 +342,6 @@ const border = getContext('border');
 									id: choice,
 									content: tooltipType && niceHTML(displayChoice)
 								})}
-								class:cursor-help={true}
 								in:scale={{ duration: choice === lastSelectVal && 175, opacity: 0.98, start: 0.95 }}
 							>
 								{indexToHeader(tooltipType ? choice : displayChoice)}

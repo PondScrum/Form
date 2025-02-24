@@ -220,6 +220,10 @@ let values = $state({});
 $inspect(forms);
 </script>
 
+<div class="h-screen">
+	{@render children()}
+</div>
+
 <div class="flex max-h-[100svh] flex-col">
 	<div class="flex h-52 max-h-52 overflow-hidden">
 		<div>
