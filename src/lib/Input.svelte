@@ -226,6 +226,7 @@ let focusedFromOutside = $state(false);
 let lastSelectVal = $state();
 const border = getContext('border');
 const divide = getContext('divide');
+const selected = getContext('selected');
 </script>
 
 {#if events}
@@ -322,6 +323,7 @@ const divide = getContext('divide');
 						id={id + '-' + i}
 						class={{
 							'text-white': lastSelectVal === choice || tooltipContent,
+							[selected]: lastSelectVal === choice,
 							[cls]: true,
 							[chosenBackgroundColor]: true
 						}}
