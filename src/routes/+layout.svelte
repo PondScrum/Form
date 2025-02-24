@@ -1,7 +1,4 @@
 <script lang="ts">
-import 'tippy.js/animations/scale-subtle.css';
-import 'tippy.js/dist/tippy.css';
-
 import type { ComponentProps } from 'svelte';
 import Form from '$lib/Form.svelte';
 import '../app.css';
@@ -220,93 +217,92 @@ let values = $state({});
 $inspect(forms);
 </script>
 
-<div class="h-screen">
-	{@render children()}
-</div>
+{@render children()}
 
-<div class="flex max-h-[100svh] flex-col">
-	<div class="flex h-52 max-h-52 overflow-hidden">
-		<div>
-			<p class="p-2 text-center text-xl">bindable overall form validity:</p>
-			<p class="text-center text-2xl font-bold">{Object.values(valid).every((e) => e)}</p>
+{#if !children}
+	<div class="flex max-h-[100svh] flex-col">
+		<div class="flex h-52 max-h-52 overflow-hidden">
+			<div>
+				<p class="p-2 text-center text-xl">bindable overall form validity:</p>
+				<p class="text-center text-2xl font-bold">{Object.values(valid).every((e) => e)}</p>
+			</div>
+
+			<div class="max-h-full grow overflow-auto border-l p-2 px-4">
+				<p class="text-lg font-bold">All Values</p>
+
+				{#each Object.values(values) as value}
+					<p class="whitespace-pre">
+						{JSON.stringify(value, null, '\t')}
+					</p>
+				{/each}
+			</div>
+
+			<p class="w-64">
+				{forms[0]}
+			</p>
 		</div>
 
-		<div class="max-h-full grow overflow-auto border-l p-2 px-4">
-			<p class="text-lg font-bold">All Values</p>
-
-			{#each Object.values(values) as value}
-				<p class="whitespace-pre">
-					{JSON.stringify(value, null, '\t')}
-				</p>
-			{/each}
-		</div>
-
-		<p class="w-64">
-			{forms[0]}
-		</p>
-	</div>
-
-	<div
-		class="flex justify-center text-xl font-medium *:mx-1 *:rounded-sm *:border *:p-2 *:capitalize"
-	>
-		<button
-			onclick={() => {
-				forms = [
-					`
+		<div
+			class="flex justify-center text-xl font-medium *:mx-1 *:rounded-sm *:border *:p-2 *:capitalize"
+		>
+			<button
+				onclick={() => {
+					forms = [
+						`
 const barebonesEX = ({Text},values)=>{
 	return Array.from({length:5}).map((e,i)=>Text('field'+i,defValidate,{})) 
 }
 		`,
-					barebonesEX
-				];
-			}}
-		>
-			barebones
-		</button>
-		<button
-			onclick={() => {
-				forms = ['z', simpleFormEX];
-			}}
-		>
-			simple
-		</button>
+						barebonesEX
+					];
+				}}
+			>
+				barebones
+			</button>
+			<button
+				onclick={() => {
+					forms = ['z', simpleFormEX];
+				}}
+			>
+				simple
+			</button>
 
-		<button
-			onclick={() => {
-				forms = ['p', getRenderedItems];
-			}}
-		>
-			Advanced
-		</button>
+			<button
+				onclick={() => {
+					forms = ['p', getRenderedItems];
+				}}
+			>
+				Advanced
+			</button>
+		</div>
+		<div class="mt-6 grow overflow-auto border-t p-8 pt-2">
+			{#key forms[0]}
+				{#each forms.slice(1, forms.length) as getRenderedItems, i (i)}
+					{#if i === 0 || formVals[i - 1]?.then === 'and'}
+						<div
+							style="padding: {i + 2}rem; padding-top:1rem; padding-bottom: 0rem;"
+							class="mx-auto w-3/4 overflow-auto border-x font-bold first:border-t last:border-b"
+						>
+							<Form
+								deleteOnHide={true}
+								classes={{
+									input: 'bg-orange-500',
+									label: 'w-auto pr-2 h-min my-auto font-bold text-lg',
+									invalid: 'bg-red-700/80 text-white',
+									block: 'min-h-22',
+									border: 'border-gray-500'
+								}}
+								bind:valid={valid[i]}
+								onChange={wrapOnChange(i)}
+								getRenderedItems={(...args) => getRenderedItems(i, ...args)}
+								events={{
+									hide: (i) => console.log(i)
+								}}
+							></Form>
+						</div>
+					{/if}
+				{/each}
+			{/key}
+		</div>
 	</div>
-	<div class="mt-6 grow overflow-auto border-t p-8 pt-2">
-		{#key forms[0]}
-			{#each forms.slice(1, forms.length) as getRenderedItems, i (i)}
-				{#if i === 0 || formVals[i - 1]?.then === 'and'}
-					<div
-						style="padding: {i + 2}rem; padding-top:1rem; padding-bottom: 0rem;"
-						class="mx-auto w-3/4 overflow-auto border-x font-bold first:border-t last:border-b"
-					>
-
-						<Form
-							deleteOnHide={true}
-							classes={{
-								input: 'bg-orange-500',
-								label: 'w-auto pr-2 h-min my-auto font-bold text-lg',
-								invalid: 'bg-red-700/80 text-white',
-								block: 'min-h-22',
-								border: 'border-gray-500'
-							}}
-							bind:valid={valid[i]}
-							onChange={wrapOnChange(i)}
-							getRenderedItems={(...args) => getRenderedItems(i, ...args)}
-							events={{
-								hide: (i) => console.log(i)
-							}}
-						></Form>
-					</div>
-				{/if}
-			{/each}
-		{/key}
-	</div>
-</div>
+{/if}

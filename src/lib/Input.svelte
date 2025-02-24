@@ -26,7 +26,9 @@ let {
 	tabindex = 0,
 	mount,
 	readonly = false,
-	tooltipDelay
+	tooltipDelay,
+	selected,
+	classes
 }: Props = $props();
 
 const { singleton_tooltip, singleton } =
@@ -146,13 +148,16 @@ function causeInput(target: PossibleInputs) {
 	handleResult(valueChanged(target.value, isFocused), target);
 }
 
+let isValid = $state(false);
 function handleResult(result: string | FormValidationReturn<string>, target: PossibleInputs) {
 	const indexer = inputType == 'boolean' ? 'checked' : 'value';
+	console.log(result);
 	if (onlyValue) {
 		target[indexer] = result as string;
 		return;
 	}
 	result = result as FormValidationReturn<string>;
+	isValid = result.valid;
 	target[indexer] = result.value;
 	resultBackgroundColor = result.background_color;
 	tooltipContent = result.tooltip;
@@ -224,9 +229,6 @@ const onmouseleave = () => {
 
 let focusedFromOutside = $state(false);
 let lastSelectVal = $state();
-const border = getContext('border');
-const divide = getContext('divide');
-const selected = getContext('selected');
 </script>
 
 {#if events}
@@ -268,12 +270,12 @@ const selected = getContext('selected');
 		<!-- 	></Textarea> -->
 	{:else if inputType === 'textarea'}
 		<textarea
-			use:tooltip={tooltipParams}
 			use:mounted
+			use:tooltip={tooltipParams}
 			{...events}
 			rows="12"
 			{id}
-			class=" {cls} {chosenBackgroundColor}"
+			class="min-h-12 {cls} {chosenBackgroundColor}"
 		></textarea>
 	{:else if inputType === 'boolean'}
 		<div class="flex h-full w-auto">
@@ -310,10 +312,10 @@ const selected = getContext('selected');
 					const oppositeIndex = i === '0' ? 1 : 0;
 				}
 			}}
-			class="flex text-nowrap"
+			class="flex w-min text-nowrap"
 		>
 			<div
-				class="flex justify-end border {border}  divide-x overflow-hidden rounded {divide} text-base"
+				class="flex justify-end border {classes.border}  divide-x overflow-hidden rounded {classes.divide} "
 			>
 				<!-- fix this class:text-white, conflicting with chosenbackgroundcolor -->
 				{#each Object.entries(options) as [choice, displayChoice], i}
@@ -322,8 +324,8 @@ const selected = getContext('selected');
 						{disabled}
 						id={id + '-' + i}
 						class={{
-							'text-white': lastSelectVal === choice || tooltipContent,
-							[selected]: lastSelectVal === choice,
+							'text-white': (!isValid && !lastSelectVal) || lastSelectVal === choice,
+							[classes.selected]: lastSelectVal === choice,
 							[cls]: true,
 							[chosenBackgroundColor]: true
 						}}

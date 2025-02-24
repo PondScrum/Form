@@ -1,4 +1,6 @@
 <script lang="ts">
+import 'tippy.js/animations/scale-subtle.css';
+import 'tippy.js/dist/tippy.css';
 import { onMount, setContext, tick, type Snippet } from 'svelte';
 import { scale } from 'svelte/transition';
 import type {
@@ -22,12 +24,16 @@ let {
 	onChange,
 	events = {},
 	initialValues,
-	classes = {
-		block: '',
-		invalid: 'bg-red-500',
-		label: 'h-min min-w-36 pr-4 text-lg font-medium text-wrap capitalize lg:min-w-44 xl:text-2xl'
-	}
+	classes = {}
 }: Props = $props();
+const defaultClasses = {
+	block: '',
+	invalid: 'bg-red-500',
+	label: 'h-min min-w-36 pr-4 text-lg font-medium text-wrap capitalize lg:min-w-44 xl:text-2xl',
+	divide: 'divide-gray-500',
+	border: 'border-gray-500'
+};
+classes = Object.assign(defaultClasses, classes);
 
 //deleteOnHide prop should delete the values at allValue provide time, so it doesnt wipe for users, only on consumption
 
@@ -44,16 +50,18 @@ import Input from './Input.svelte';
 
 const defaultInputProps = {
 	input: {
-		class: `w-52 font-mono font-normal h-8 rounded  px-2 ${classes.border && 'border ' + classes.border}`
+		class: `font-mono font-normal h-8 rounded  px-2 ${classes.border && 'border ' + classes.border}`
 	},
 	label: {
 		hide: false,
 		alias: false
-	}
+	},
+	col: true
 };
 
 const components = [
 	'Text',
+	'Textarea',
 	'Select',
 	'Date',
 	'InlineSelect',
@@ -360,10 +368,10 @@ setContext('border', classes.border);
 	<div
 		in:scale={{ duration: 100, opacity: 0.98, start: 0.98 }}
 		class:flex-col={props.col}
-		class="flex text-sm {props.block?.class || classes.block}"
+		class="flex {props.block?.class || classes.block}"
 	>
 		{#if Component === 'header'}
-			<p class="text-5xl font-medium">
+			<p class={classes.header}>
 				{props.index}
 				<!-- {props.header} -->
 			</p>
@@ -374,20 +382,19 @@ setContext('border', classes.border);
 					{#if html}
 						{@html html}
 					{:else}
-						{indexToHeader(alias || props?.index || '')}
+						{alias || indexToHeader(props?.index || '')}
 					{/if}
 				</label>
 			{/if}
-			<div class="mx-auto my-auto max-h-24 overflow-hidden">
-				{#key forceRerender[props.index]}
-					<Component
-						bind:this={componentMap[props.index]}
-						cls={props.input.class || classes.input}
-						{...props}
-						disabled={readonly || props.readonly || disableMap[props.index]}
-					></Component>
-				{/key}
-			</div>
+			{#key forceRerender[props.index]}
+				<Component
+					{classes}
+					bind:this={componentMap[props.index]}
+					cls={props.input.class || classes.input}
+					{...props}
+					disabled={readonly || props.readonly || disableMap[props.index]}
+				></Component>
+			{/key}
 		{/if}
 	</div>
 {/snippet}
