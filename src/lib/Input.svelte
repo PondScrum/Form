@@ -225,6 +225,7 @@ const onmouseleave = () => {
 let focusedFromOutside = $state(false);
 let lastSelectVal = $state();
 const border = getContext('border');
+const divide = getContext('divide');
 </script>
 
 {#if events}
@@ -311,8 +312,7 @@ const border = getContext('border');
 			class="flex text-nowrap"
 		>
 			<div
-				class="flex justify-end {border &&
-					border + '  border *:border-r  *:last:border-r-0 '}  overflow-hidden rounded text-base"
+				class="flex justify-end border {border}  divide-x overflow-hidden rounded {divide} text-base"
 			>
 				<!-- fix this class:text-white, conflicting with chosenbackgroundcolor -->
 				{#each Object.entries(options) as [choice, displayChoice], i}
@@ -321,7 +321,6 @@ const border = getContext('border');
 						{disabled}
 						id={id + '-' + i}
 						class={{
-							[`border-r bg-blue-500 last:border-r-0 ${border}`]: lastSelectVal === choice,
 							'text-white': lastSelectVal === choice || tooltipContent,
 							[cls]: true,
 							[chosenBackgroundColor]: true

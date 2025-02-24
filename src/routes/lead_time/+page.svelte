@@ -1,5 +1,6 @@
 <script lang="ts">
 import Form from '$lib/Form.svelte';
+import { setContext } from 'svelte';
 
 function createValidationParams(index, value, focused, props, vl) {
 	console.log(vl);
@@ -119,10 +120,10 @@ const tryParse = (s) => {
 		return s;
 	}
 };
+setContext('border', 'border-red-500');
 </script>
 
 <Form
-	readonly={true}
 	classes={{
 		border: 'dark-border',
 		block: 'font-semibold border-standard py-2',
