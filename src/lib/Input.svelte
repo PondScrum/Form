@@ -88,7 +88,7 @@ let isFocused: boolean = $state(false);
 
 export function setValue(value: string) {
 	if (inputType.split('_')[0] === 'inlineselect') {
-		lastSelectVal = initialValue;
+		lastSelectVal = value;
 	}
 	handleResult(valueChanged(value, false), document.getElementById(id) as PossibleInputs);
 }
@@ -354,7 +354,7 @@ const selected = getContext('selected');
 		</div>
 	{:else if readonly}
 		<div class="flex {cls} px-1">
-			<p class="my-auto h-min w-full font-mono text-lg select-all">
+			<p class="my-auto h-min w-full text-lg select-all">
 				{initialValue}
 			</p>
 		</div>

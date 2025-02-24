@@ -44,7 +44,7 @@ import Input from './Input.svelte';
 
 const defaultInputProps = {
 	input: {
-		class: `w-52 h-8 rounded font-mono px-2 ${classes.border && 'border ' + classes.border}`
+		class: `w-52 h-8 rounded font-normal px-2 ${classes.border && 'border ' + classes.border}`
 	},
 	label: {
 		hide: false,

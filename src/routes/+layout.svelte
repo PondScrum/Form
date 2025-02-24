@@ -287,6 +287,7 @@ const barebonesEX = ({Text},values)=>{
 						style="padding: {i + 2}rem; padding-top:1rem; padding-bottom: 0rem;"
 						class="mx-auto w-3/4 overflow-auto border-x font-bold first:border-t last:border-b"
 					>
+
 						<Form
 							deleteOnHide={true}
 							classes={{
