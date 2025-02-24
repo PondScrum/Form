@@ -24,7 +24,8 @@ let {
 	onChange,
 	events = {},
 	initialValues,
-	classes = {}
+	classes = {},
+	globalKey
 }: Props = $props();
 const defaultClasses = {
 	block: '',
@@ -334,6 +335,20 @@ let componentMap: Record<string, InputComponentPublicFns> = $state({});
 setContext('border', classes.border);
 </script>
 
+<div class="relative h-min w-full" in:scale={{ duration: 100, opacity: 0.2, start: 0.98 }}>
+	<div class="">
+		<!-- {#if title} -->
+		<!-- 	<h1 class="pb-3 text-center text-3xl font-bold underline"> -->
+		<!-- 		{title} -->
+		<!-- 	</h1> -->
+		<!-- {/if} -->
+		<div class="">
+			{#key globalKey}
+				{@render handleArr(renderedComponents)}
+			{/key}
+		</div>
+	</div>
+</div>
 {#snippet handleArr(items: Block[])}
 	{#each items as renderSpec}
 		{#if renderSpec}
@@ -350,19 +365,6 @@ setContext('border', classes.border);
 		{/if}
 	{/each}
 {/snippet}
-
-<div class="relative h-min w-full" in:scale={{ duration: 100, opacity: 0.2, start: 0.98 }}>
-	<div class="">
-		<!-- {#if title} -->
-		<!-- 	<h1 class="pb-3 text-center text-3xl font-bold underline"> -->
-		<!-- 		{title} -->
-		<!-- 	</h1> -->
-		<!-- {/if} -->
-		<div class="">
-			{@render handleArr(renderedComponents)}
-		</div>
-	</div>
-</div>
 
 {#snippet Block(Component: Snippet | 'header', props: InputProps)}
 	<div

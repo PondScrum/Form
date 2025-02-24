@@ -53,6 +53,7 @@ const { singleton_tooltip, singleton } =
 					{
 						name: 'preventOverflow',
 						options: {
+							rootBoundary: 'scrollParent',
 							altAxis: true,
 							tether: false
 						}
@@ -150,6 +151,7 @@ function causeInput(target: PossibleInputs) {
 
 let isValid = $state(false);
 function handleResult(result: string | FormValidationReturn<string>, target: PossibleInputs) {
+	isValid = !Boolean(result.tooltip);
 	const indexer = inputType == 'boolean' ? 'checked' : 'value';
 	console.log(result);
 	if (onlyValue) {
@@ -157,7 +159,6 @@ function handleResult(result: string | FormValidationReturn<string>, target: Pos
 		return;
 	}
 	result = result as FormValidationReturn<string>;
-	isValid = result.valid;
 	target[indexer] = result.value;
 	resultBackgroundColor = result.background_color;
 	tooltipContent = result.tooltip;
@@ -186,7 +187,7 @@ let tooltipParams = () => {
 		onShown: () => (tooltipShown = true),
 		disabled: onlyValue,
 		content: niceHTML(tooltipContent),
-		trigger: 'mouseenter',
+		trigger: 'mouseenter click',
 		focused: isFocused,
 		placement: tooltipSide,
 		allowHTML: true,
@@ -200,7 +201,7 @@ let tooltipParams = () => {
 				{
 					name: 'flip',
 					options: {
-						fallbackPlacements: ['bottom', 'top']
+						fallbackPlacements: ['bottom', 'right']
 					}
 				},
 				{
@@ -236,6 +237,7 @@ let lastSelectVal = $state();
 		{#if options}
 			<!-- cant spread events here since programatic value assignment on select only works with 'change' -->
 			<select
+				class:text-white={!isValid}
 				tabindex={disabled ? -1 : tabindex}
 				onchange={events.oninput}
 				onblur={events.onblur}
@@ -275,7 +277,7 @@ let lastSelectVal = $state();
 			{...events}
 			rows="12"
 			{id}
-			class="min-h-12 {cls} {chosenBackgroundColor}"
+			class="border {classes.border} min-h-12 {cls} {chosenBackgroundColor}"
 		></textarea>
 	{:else if inputType === 'boolean'}
 		<div class="flex h-full w-auto">
@@ -362,13 +364,15 @@ let lastSelectVal = $state();
 		</div>
 	{:else}
 		<input
+			class:accent-white={!isValid}
+			class:text-white={!isValid}
 			{disabled}
 			tabindex={disabled ? -1 : tabindex}
 			{id}
 			autocomplete="off"
 			{...events}
 			type={inputType}
-			class="{cls} {chosenBackgroundColor}"
+			class="{cls} zzz {chosenBackgroundColor}"
 			use:mounted
 			use:tooltip={tooltipParams}
 		/>
