@@ -7,7 +7,6 @@ import tippy from 'tippy.js';
 import { slide } from 'svelte/transition';
 
 const onChange: OnChange = (values, inputInfo, methods) => {
-	console.log(values);
 	formData = values;
 };
 
@@ -28,6 +27,8 @@ async function submit() {
 
 let loading = $state(false);
 </script>
+
+{formData?.other?.dept}
 
 <div
 	class=" mx-auto flex h-[100svh] max-w-[60rem] flex-col overflow-hidden border-x border-gray-500 px-2 shadow-2xl md:w-3/4 md:px-4 lg:w-1/2 xl:w-1/3"

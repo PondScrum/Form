@@ -108,11 +108,11 @@ const match: Match = (value: string | boolean, block: Block | Block[]) => {
 			.flat()
 			.filter((e) => e);
 		if (
-			(usedBool && Boolean(allValues[valueIndex]) === value) ||
+			(usedBool && Boolean([valueIndex]) === value) ||
 			values
 				.slice()
 				.map((e) => e.toString().toLowerCase())
-				.includes(allValues[valueIndex]?.toString()?.toLowerCase())
+				.includes(getValue(valueIndex)?.toString()?.toLowerCase())
 		) {
 			allBlocks.forEach((b) => show(b.props.index));
 			return blocks;
@@ -142,6 +142,20 @@ const pivot: Pivot = (valueIndex, ...matches) => {
 	return flatten(res);
 };
 const nestMap = $state({});
+
+function cleanupEmptyObjects(obj) {
+	const isObj = (o) => typeof o === 'object' && !Array.isArray(obj);
+	if (!isObj(obj)) return;
+	Object.keys(obj).forEach((k) => {
+		if (!isObj(obj[k])) return;
+		if (Object.keys(obj[k]).length === 0) {
+			delete obj[k];
+		} else {
+			cleanupEmptyObjects(obj[k]);
+		}
+	});
+	return obj;
+}
 
 const buildTimeComponents = {
 	Pivot: pivot,
@@ -182,13 +196,13 @@ function setup() {
 					const oc = (value: string, focused: boolean) =>
 						inputChanged(index, value, focused, validate, props);
 
-					const values = handleNested(index).ref;
+					const nestRes = handleNested(index, allValues);
 					allProps[index] = props;
 					const res = {
 						renderType: 'block',
 						component: Input,
 						props: {
-							initialValue: values[index] || '',
+							initialValue: nestRes.ref[nestRes.index] || '',
 							id: type.toLowerCase() + '-' + index,
 							index,
 							valueChanged: oc,
@@ -243,7 +257,6 @@ function collectBlocks(obj: Block): BaseBlock[] {
 }
 
 let validityMap: Record<string, boolean> = $state({});
-$inspect(validityMap);
 
 function determineValidity() {
 	// const nonHiddenFields = Object.keys(allValues).filter((e) => !(e in hidden) && !(e in nestMap));
@@ -258,21 +271,24 @@ function provideAllValues() {
 	const res = structuredClone($state.snapshot(allValues));
 	if (deleteOnHide) {
 		Object.keys(hidden).forEach((e) => {
-			const res = handleNested(e);
-			const toDeleteFrom = res.ref;
-			delete toDeleteFrom[res.index];
-			// if (DELETE_EMPTY_NESTED && Object.keys(toDeleteFrom).length===0) {
-			// 	res.
-			//
-			// }
+			const nestRes = handleNested(e, res);
+			const toDeleteFrom = nestRes.ref;
+			delete toDeleteFrom[nestRes.index];
 		});
 	}
+	cleanupEmptyObjects(res);
 	return res;
 }
 
-function handleNested(index) {
-	if (!isNested(index)) return { ref: allValues, index };
-	let ref = allValues;
+function getValue(originalIndex) {
+	console.log(originalIndex);
+	const res = handleNested(originalIndex, allValues);
+	console.log(res);
+	console.log(res.ref[res.index]);
+	return res.ref[res.index];
+}
+function handleNested(index, ref) {
+	if (!isNested(index)) return { ref, index };
 	const allIndexes = index.split('_').filter((e) => e);
 	const rootIndex = allIndexes[0];
 	const finalIndex = allIndexes.slice(-1)[0];
@@ -291,7 +307,7 @@ function inputChanged(
 	props: InputProps
 ) {
 	const RO = readonly || props?.readonly;
-	const res = handleNested(index);
+	const res = handleNested(index, allValues);
 	const originalIndex = index;
 
 	let dataRef = res.ref;
@@ -299,7 +315,7 @@ function inputChanged(
 	try {
 		index = index.toLowerCase();
 		if (props.key && value !== allValues[index]) {
-			//this will def not work in cases of validation fn's returning override values
+			//			this will def not work in cases of validation fn's returning override values
 			tick().then(() =>
 				tick().then(() => {
 					forceRerender[props.key] ??= true;
@@ -310,11 +326,6 @@ function inputChanged(
 		let validationRes = { valid: true, data: value };
 		if (!RO) {
 			validationRes = validate(value, focused);
-			// if (preOnChange) {
-			// 	const { exportRes, relevantRes } = preOnChange({ index, value, exp, relevant });
-			// 	exp = exportRes;
-			// 	relevant = relevantRes;
-			// }
 		}
 
 		validityMap[originalIndex] = validationRes.valid;
@@ -322,6 +333,7 @@ function inputChanged(
 		const convertedResponse = handleValidationResponse(validationRes, value);
 
 		dataRef[index] = convertedResponse.value;
+		//allValues[originalIndex]=convertedResponse.value;
 
 		const eventToRun = events[validationRes.valid ? 'valid' : 'error'];
 		!RO && eventToRun && eventToRun(index, validationRes.data);
@@ -342,6 +354,7 @@ function inputChanged(
 		if (e instanceof Error) onJSError?.(e);
 	}
 }
+$inspect(allValues);
 
 let wrappedComponents: ProvidedComponents;
 
@@ -402,7 +415,7 @@ const yy = slide;
 	</div>
 </div>
 {#snippet handleArr(items: Block[])}
-	{#each items as renderSpec, i (i)}
+	{#each items as renderSpec}
 		{#if renderSpec}
 			{@const { renderType } = renderSpec}
 			{#if renderType == 'group'}
@@ -462,7 +475,7 @@ const yy = slide;
 		class:flex-col={type === 'col'}
 		class="flex {classes.border}"
 	>
-		{#each blocks as block, i (i)}
+		{#each blocks as block, i}
 			{#if block}
 				{#if block.renderType === 'block'}
 					{#key forceRerender[block.props.index]}
