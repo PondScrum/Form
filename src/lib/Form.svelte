@@ -354,7 +354,6 @@ function inputChanged(
 		if (e instanceof Error) onJSError?.(e);
 	}
 }
-$inspect(allValues);
 
 let wrappedComponents: ProvidedComponents;
 
