@@ -38,6 +38,12 @@ classes = Object.assign(defaultClasses, classes);
 
 //deleteOnHide prop should delete the values at allValue provide time, so it doesnt wipe for users, only on consumption
 
+// type DeepReadonly<T> = T extends Function ? T :
+//   T extends object ? { readonly [K in keyof T]: DeepReadonly<T[K]> } :
+//   T;
+
+let allProps: Readonly<Record<string, any>> = $state({});
+
 function handleValidationResponse(res: ReturnType<Validate>, currentValue = '') {
 	const isValid = res.valid;
 	return {
@@ -132,11 +138,20 @@ const pivot: Pivot = (valueIndex, ...matches) => {
 		items.every((e) => e.renderType) ? items : flatten(items.flat());
 	return flatten(res);
 };
+const nestMap = $state({});
 
 const buildTimeComponents = {
 	Pivot: pivot,
-	Match: match
+	Match: match,
+	NestIndex: (...indexes) => {
+		const finalIndex = indexes.slice(-1)[0];
+		nestMap[finalIndex] = indexes.join('_');
+		return '_' + indexes.join('_');
+	}
 };
+function isNested(index: string) {
+	return index?.[0] === '_';
+}
 
 const isGroup = (type: string) => ['Col', 'Row'].includes(type);
 
@@ -161,11 +176,14 @@ function setup() {
 					index = index.toLowerCase();
 					const oc = (value: string, focused: boolean) =>
 						inputChanged(index, value, focused, validate, props);
+
+					const values = handleNested(index).ref;
+					allProps[index] = props;
 					const res = {
 						renderType: 'block',
 						component: Input,
 						props: {
-							initialValue: allValues[index] || '',
+							initialValue: values[index] || '',
 							id: type.toLowerCase() + '-' + index,
 							index,
 							valueChanged: oc,
@@ -231,10 +249,24 @@ function provideAllValues() {
 	const res = structuredClone($state.snapshot(allValues));
 	if (deleteOnHide) {
 		Object.keys(hidden).forEach((e) => {
-			delete res[e];
+			const res = handleNested(e);
+			const toDeleteFrom = res.ref;
+			delete toDeleteFrom[res.index];
 		});
 	}
 	return res;
+}
+
+function handleNested(index) {
+	if (!isNested(index)) return { ref: allValues, index };
+	let ref = allValues;
+	const allIndexes = index.split('_').filter((e) => e);
+	const finalIndex = allIndexes.slice(-1)[0];
+	allIndexes.slice(0, allIndexes.length - 1).forEach((e) => {
+		ref[e] ??= {};
+		ref = ref[e];
+	});
+	return { ref, index: finalIndex };
 }
 
 function inputChanged(
@@ -245,6 +277,10 @@ function inputChanged(
 	props: InputProps
 ) {
 	const RO = readonly || props?.readonly;
+	const res = handleNested(index);
+
+	let dataRef = res.ref;
+	index = res.index;
 	try {
 		index = index.toLowerCase();
 		if (props.key && value !== allValues[index]) {
@@ -270,7 +306,7 @@ function inputChanged(
 
 		const convertedResponse = handleValidationResponse(validationRes, value);
 
-		allValues[index] = convertedResponse.value;
+		dataRef[index] = convertedResponse.value;
 
 		const eventToRun = events[validationRes.valid ? 'valid' : 'error'];
 		!RO && eventToRun && eventToRun(index, validationRes.data);

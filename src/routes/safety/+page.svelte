@@ -6,6 +6,7 @@ import { getValidationChange, onscroll, render, setValidationLevel } from './con
 import tippy from 'tippy.js';
 
 const onChange: OnChange = (values, inputInfo, methods) => {
+	console.log(values);
 	formData = values;
 };
 
@@ -34,6 +35,7 @@ let loading = $state(false);
 	<div id="bound" class="grow overflow-hidden border-y border-gray-500">
 		<div {onscroll} class=" max-h-full overflow-auto p-4">
 			<Form
+				deleteOnHide={true}
 				globalKey={getValidationChange()}
 				classes={{
 					selected: 'bg-blue-500',

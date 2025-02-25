@@ -51,8 +51,15 @@ const selectValidation = (value) => {
 	return { valid: valid, data: valid ? value : 'Must Select Value' };
 };
 
+function movePointer(index) {
+	return (obj) => {
+		obj[index] ??= {};
+		return obj[index];
+	};
+}
+
 export const render: GetRenderedItems = (
-	{ Select, Row, Text, Textarea, Header, Date, InlineSelect },
+	{ Select, Row, Text, Textarea, Header, Date, Pivot, Match, InlineSelect, NestIndex },
 	allValues
 ) => {
 	const OTH_SELECT = (index, options) =>
@@ -80,7 +87,15 @@ export const render: GetRenderedItems = (
 			{ action: 'action', condition: 'condition' },
 			{ input: { class: 'w-20 text-sm font-medium text-black/90 h-8 p-0' } }
 		),
+
 		Select('dept', selectValidation, deptOfObv, {}),
+		Pivot(
+			'dept',
+			Match(
+				'OTH',
+				Text(NestIndex('other', 'dept'), textValidation, { label: { alias: 'Other Dept' } })
+			)
+		),
 		Textarea('dept_desc', textValidation(true), {
 			label: { alias: 'Detailed Location of Observation' },
 			input: { class: 'h-24 border rounded resize-none p-1 text-sm ' }
