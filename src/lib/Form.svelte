@@ -2,7 +2,7 @@
 import 'tippy.js/animations/scale-subtle.css';
 import 'tippy.js/dist/tippy.css';
 import { onMount, setContext, tick, type Snippet } from 'svelte';
-import { scale } from 'svelte/transition';
+import { fade, scale, slide } from 'svelte/transition';
 import type {
 	BaseBlock,
 	Block,
@@ -25,7 +25,8 @@ let {
 	events = {},
 	initialValues,
 	classes = {},
-	globalKey
+	globalKey,
+	svelteTransition = slide
 }: Props = $props();
 const defaultClasses = {
 	block: '',
@@ -85,6 +86,7 @@ let renderedComponents: Block[] = $state([]);
 // let hidden: string[] = $state([]);
 
 let hidden: Record<string, boolean> = $state({});
+let lastShown = $state([]);
 
 const match: Match = (value: string | boolean, block: Block | Block[]) => {
 	let usedBool = typeof value === 'boolean';
@@ -96,6 +98,7 @@ const match: Match = (value: string | boolean, block: Block | Block[]) => {
 		pivots[valueIndex] ??= {};
 		pivots[valueIndex][uid] = blocks; // or block?
 		const show = (index: string) => {
+			lastShown.push(index);
 			hidden[index] && events.show?.(index);
 			delete hidden[index];
 		};
@@ -145,7 +148,7 @@ const buildTimeComponents = {
 	Match: match,
 	NestIndex: (...indexes) => {
 		const finalIndex = indexes.slice(-1)[0];
-		nestMap[finalIndex] = indexes.join('_');
+		nestMap[indexes[0]] = indexes.join('_');
 		return '_' + indexes.join('_');
 	}
 };
@@ -159,9 +162,11 @@ function render() {
 	const components = getRenderedItems(wrappedComponents, allValues);
 	const toRender = components.filter((e) => e).flat();
 	if (wrappedComponents) {
-		// await tick();
 		setRendered(toRender);
 	}
+	tick().then(() => {
+		lastShown = [];
+	});
 }
 
 function setup() {
@@ -233,18 +238,22 @@ function collectBlocks(obj: Block): BaseBlock[] {
 	} else if (obj.renderType === 'block') {
 		allBlocks = [...allBlocks, obj];
 		return allBlocks as { renderType: 'block'; props: InputProps; component: Snippet }[];
-		allblocks;
 	}
 	return [];
 }
 
 let validityMap: Record<string, boolean> = $state({});
+$inspect(validityMap);
 
 function determineValidity() {
-	const nonHiddenFields = Object.keys(allValues).filter((e) => !(e in hidden));
+	// const nonHiddenFields = Object.keys(allValues).filter((e) => !(e in hidden) && !(e in nestMap));
+	// return nonHiddenFields.every((k) => validityMap[k]);
+
+	const nonHiddenFields = Object.keys(validityMap).filter((e) => !(e in hidden));
 	return nonHiddenFields.every((k) => validityMap[k]);
 }
 
+const DELETE_EMPTY_NESTED = true;
 function provideAllValues() {
 	const res = structuredClone($state.snapshot(allValues));
 	if (deleteOnHide) {
@@ -252,6 +261,10 @@ function provideAllValues() {
 			const res = handleNested(e);
 			const toDeleteFrom = res.ref;
 			delete toDeleteFrom[res.index];
+			// if (DELETE_EMPTY_NESTED && Object.keys(toDeleteFrom).length===0) {
+			// 	res.
+			//
+			// }
 		});
 	}
 	return res;
@@ -261,12 +274,13 @@ function handleNested(index) {
 	if (!isNested(index)) return { ref: allValues, index };
 	let ref = allValues;
 	const allIndexes = index.split('_').filter((e) => e);
+	const rootIndex = allIndexes[0];
 	const finalIndex = allIndexes.slice(-1)[0];
 	allIndexes.slice(0, allIndexes.length - 1).forEach((e) => {
 		ref[e] ??= {};
 		ref = ref[e];
 	});
-	return { ref, index: finalIndex };
+	return { ref, index: finalIndex, rootIndex };
 }
 
 function inputChanged(
@@ -278,6 +292,7 @@ function inputChanged(
 ) {
 	const RO = readonly || props?.readonly;
 	const res = handleNested(index);
+	const originalIndex = index;
 
 	let dataRef = res.ref;
 	index = res.index;
@@ -302,7 +317,7 @@ function inputChanged(
 			// }
 		}
 
-		validityMap[index] = validationRes.valid;
+		validityMap[originalIndex] = validationRes.valid;
 
 		const convertedResponse = handleValidationResponse(validationRes, value);
 
@@ -369,6 +384,7 @@ function indexToHeader(str: string) {
 }
 let componentMap: Record<string, InputComponentPublicFns> = $state({});
 setContext('border', classes.border);
+const yy = slide;
 </script>
 
 <div class="relative h-min w-full" in:scale={{ duration: 100, opacity: 0.2, start: 0.98 }}>
@@ -386,7 +402,7 @@ setContext('border', classes.border);
 	</div>
 </div>
 {#snippet handleArr(items: Block[])}
-	{#each items as renderSpec}
+	{#each items as renderSpec, i (i)}
 		{#if renderSpec}
 			{@const { renderType } = renderSpec}
 			{#if renderType == 'group'}
@@ -394,7 +410,7 @@ setContext('border', classes.border);
 				{@render Group(type, blocks)}
 			{:else}
 				{@const { component, props } = renderSpec}
-				{#key props.id}
+				{#key props.index}
 					{@render Block(component, props)}
 				{/key}
 			{/if}
@@ -404,7 +420,7 @@ setContext('border', classes.border);
 
 {#snippet Block(Component: Snippet | 'header', props: InputProps)}
 	<div
-		in:scale={{ duration: 100, opacity: 0.98, start: 0.98 }}
+		in:svelteTransition={{ duration: lastShown.includes(props.index) ? 75 : 0 }}
 		class:flex-col={props.col}
 		class="flex {props.block?.class || classes.block}"
 	>
@@ -416,7 +432,10 @@ setContext('border', classes.border);
 		{:else}
 			{@const { hide, alias, html } = props.label}
 			{#if !hide || alias}
-				<label for={props.inputType} class={props.label.class || classes.label}>
+				<label
+					for={props.inputType}
+					class={props.label.class || classes.label + ` ${props.label.additionalClass}`}
+				>
 					{#if html}
 						{@html html}
 					{:else}

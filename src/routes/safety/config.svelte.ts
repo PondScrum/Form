@@ -32,7 +32,8 @@ const catHazType = {
 	Housekeeping: 'Housekeeping',
 	'Struck By or Striking Against': 'Struck By or Striking Against',
 	'Caught in, on or between': 'Caught in, on or between',
-	Lacerations: 'Lacerations'
+	Lacerations: 'Lacerations',
+	OTH: 'Other'
 };
 
 import { page } from '$app/state';
@@ -93,7 +94,10 @@ export const render: GetRenderedItems = (
 			'dept',
 			Match(
 				'OTH',
-				Text(NestIndex('other', 'dept'), textValidation, { label: { alias: 'Other Dept' } })
+				Text(NestIndex('other', 'dept'), textValidation(true), {
+					col: false,
+					label: { alias: 'Other Dept', additionalClass: 'pr-4' }
+				})
 			)
 		),
 		Textarea('dept_desc', textValidation(true), {
@@ -120,7 +124,19 @@ export const render: GetRenderedItems = (
 			Object.fromEntries(['low', 'medium', 'high'].map((e) => [e, e])),
 			{ input: { class: 'w-20 text-sm font-medium text-black/90 h-8 p-0' } }
 		),
-		OTH_SELECT('cat_haz_type', catHazType, { label: { alias: 'Category or Hazard Type' } })
+		Select('cat_haz_type', selectValidation, catHazType, {
+			label: { alias: 'Category or Hazard Type' }
+		}),
+		Pivot(
+			'cat_haz_type',
+			Match(
+				'OTH',
+				Text(NestIndex('other', 'dept'), textValidation(true), {
+					col: false,
+					label: { alias: 'Other Cat Haz Type', additionalClass: 'pr-4' }
+				})
+			)
+		)
 	];
 };
 export const onscroll = (e) => {

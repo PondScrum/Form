@@ -4,6 +4,7 @@ import Form, { type GetRenderedItems, type OnChange } from '$lib';
 import { setContext, tick } from 'svelte';
 import { getValidationChange, onscroll, render, setValidationLevel } from './config.svelte';
 import tippy from 'tippy.js';
+import { slide } from 'svelte/transition';
 
 const onChange: OnChange = (values, inputInfo, methods) => {
 	console.log(values);
@@ -32,6 +33,7 @@ let loading = $state(false);
 	class=" mx-auto flex h-[100svh] max-w-[60rem] flex-col overflow-hidden border-x border-gray-500 px-2 shadow-2xl md:w-3/4 md:px-4 lg:w-1/2 xl:w-1/3"
 >
 	<h1 class="top-0 z-100 px-4 pb-2 text-center text-2xl font-bold md:text-3xl">Safety Form</h1>
+	{valid?.toString()}
 	<div id="bound" class="grow overflow-hidden border-y border-gray-500">
 		<div {onscroll} class=" max-h-full overflow-auto p-4">
 			<Form
