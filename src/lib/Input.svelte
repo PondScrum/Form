@@ -28,7 +28,8 @@ let {
 	readonly = false,
 	tooltipDelay,
 	selected,
-	classes
+	classes,
+	input
 }: Props = $props();
 
 const { singleton_tooltip, singleton } =
@@ -106,6 +107,7 @@ let combinedOnFocus;
 let events = $state();
 
 onMount(() => {
+	console.log(onMount,id)
 	const { onfocus, ...restEvents } = additionalEvents;
 	const requiredEvents = {
 		onfocus: (e: FocusEvent) => {
@@ -369,6 +371,7 @@ class={{'accent-white text-white': !isValid,
 			tabindex={disabled ? -1 : tabindex}
 			{id}
 			autocomplete="off"
+			{...input.elementAttributes}
 			{...events}
 			type={inputType}
 			use:mounted

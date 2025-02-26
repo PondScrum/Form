@@ -132,7 +132,7 @@ export const render: GetRenderedItems = (
 			Match(
 				'OTH',
 				Text(NestIndex('other', 'cat_haz_type'), textValidation(true), {
-					col: false,
+					row: true,
 					label: { alias: 'Other Cat Haz Type', additionalClass: 'pr-4' }
 				})
 			)

@@ -29,12 +29,17 @@ let {
 	svelteTransition = slide
 }: Props = $props();
 const defaultClasses = {
-	block: '',
-	invalid: 'bg-red-500',
-	label: 'h-min min-w-36 pr-4 text-lg font-medium text-wrap capitalize lg:min-w-44 xl:text-2xl',
-	divide: 'divide-gray-500',
-	border: 'border-gray-500'
-};
+						input: `font-mono font-normal h-8 rounded  px-2`,
+						selected: 'bg-blue-500',
+						header: 'text-2xl tracking-tight border-b pb-1 mx-auto',
+						border: 'border-gray-500',
+						divide:'divide-gray-500',
+						group: 'border-gray-200  border-b pb-6',
+						block: 'flex-wrap pt-4 pr-4  ',
+						invalid: 'bg-red-700/75',
+						label: 'text-xl pb-1 font-semibold'
+					};
+
 classes = Object.assign(defaultClasses, classes);
 
 //deleteOnHide prop should delete the values at allValue provide time, so it doesnt wipe for users, only on consumption
@@ -46,7 +51,6 @@ classes = Object.assign(defaultClasses, classes);
 let allProps: Readonly<Record<string, any>> = $state({});
 
 function handleValidationResponse(res: ReturnType<Validate>, currentValue = '') {
-	console.log(res)
 	const isValid = res.valid;
 	return {
 		valid: isValid,
@@ -58,22 +62,13 @@ function handleValidationResponse(res: ReturnType<Validate>, currentValue = '') 
 
 import Input from './Input.svelte';
 
-const defaultInputProps = {
-	input: {
-		class: `font-mono font-normal h-8 rounded  px-2 ${classes.border && 'border ' + classes.border}`
-	},
-	label: {
-		hide: false,
-		alias: false
-	},
-	col: true
-};
 
 const components = [
 	'Text',
 	'Textarea',
 	'Select',
 	'Date',
+	'Time',
 	'InlineSelect',
 	'Col',
 	'Row',
@@ -88,7 +83,7 @@ let renderedComponents: Block[] = $state([]);
 // let hidden: string[] = $state([]);
 
 let hidden: Record<string, boolean> = $state({});
-let lastShown = $state([]);
+let lastShown = $state({});
 
 const match: Match = (value: string | boolean, block: Block | Block[]) => {
 	let usedBool = typeof value === 'boolean';
@@ -100,7 +95,7 @@ const match: Match = (value: string | boolean, block: Block | Block[]) => {
 		pivots[valueIndex] ??= {};
 		pivots[valueIndex][uid] = blocks; // or block?
 		const show = (index: string) => {
-			lastShown.push(index);
+			tick().then(()=>(lastShown[index]=true))
 			hidden[index] && events.show?.(index);
 			delete hidden[index];
 		};
@@ -180,9 +175,9 @@ function render() {
 	if (wrappedComponents) {
 		setRendered(toRender);
 	}
-	tick().then(() => {
-		lastShown = [];
-	});
+	// tick().then(() => {
+	// 	lastShown = {};
+	// });
 }
 
 function setup() {
@@ -200,6 +195,9 @@ function setup() {
 
 					const nestRes = handleNested(index, allValues);
 					allProps[index] = props;
+					props.label??={}
+					props.input??={}
+					props.input.class??= classes.input + (classes.border && ' border ' + classes.border) || ''
 					const res = {
 						renderType: 'block',
 						component: Input,
@@ -209,7 +207,6 @@ function setup() {
 							index,
 							valueChanged: oc,
 							inputType: type.toLowerCase(),
-							...defaultInputProps,
 							...props
 						}
 					};
@@ -283,10 +280,7 @@ function provideAllValues() {
 }
 
 function getValue(originalIndex) {
-	console.log(originalIndex);
 	const res = handleNested(originalIndex, allValues);
-	console.log(res);
-	console.log(res.ref[res.index]);
 	return res.ref[res.index];
 }
 function handleNested(index, ref) {
@@ -399,6 +393,10 @@ function indexToHeader(str: string) {
 let componentMap: Record<string, InputComponentPublicFns> = $state({});
 setContext('border', classes.border);
 const yy = slide;
+let mounted=$state(false)
+onMount(()=>{
+	mounted=true
+})
 </script>
 
 <div class="relative h-min w-full" in:scale={{ duration: 100, opacity: 0.2, start: 0.98 }}>
@@ -415,28 +413,43 @@ const yy = slide;
 		</div>
 	</div>
 </div>
-{#snippet handleArr(items: Block[])}
+
+
+{#snippet handleArr(items: Block | Block[],recur=false)}
 	{#each items as renderSpec}
 		{#if renderSpec}
-			{@const { renderType } = renderSpec}
-			{#if renderType == 'group'}
+{#if Array.isArray(renderSpec)}
+{@render handleArr(renderSpec,true)}
+{:else if renderSpec.renderType == 'group'}
 				{@const { type, blocks } = renderSpec}
-				{@render Group(type, blocks)}
+				{@render Group(type, blocks,!recur && classes.group)}
 			{:else}
+<!-- {@render Group('col',[renderSpec])} -->
+	{#if !recur && renderSpec.renderType==='block'}
+{@render Group('col',[renderSpec],!recur && classes.group)}
+{:else}
 				{@const { component, props } = renderSpec}
-				{#key props.index}
 					{@render Block(component, props)}
-				{/key}
+{/if}
 			{/if}
 		{/if}
 	{/each}
 {/snippet}
 
-{#snippet Block(Component: Snippet | 'header', props: InputProps)}
+
+
+{JSON.stringify(lastShown)}
+
+{#snippet Block(Component: Snippet | 'header', props: InputProps,keys)}
+{#key lastShown[props.index]}
 	<div
-		in:svelteTransition={{ duration: lastShown.includes(props.index) ? 75 : 0 }}
-		class:flex-col={props.col}
-		class="flex {props.block?.class || classes.block}"
+	in:fade={{ duration:275,delay:200 }}
+class={{
+	
+	[props.block?.class || classes.block]: true,
+	' flex-col': !props.row,
+	'flex':true
+}}
 	>
 		{#if Component === 'header'}
 			<p class={classes.header}>
@@ -457,7 +470,6 @@ const yy = slide;
 					{/if}
 				</label>
 			{/if}
-			{#key forceRerender[props.index]}
 				<Component
 					{classes}
 					bind:this={componentMap[props.index]}
@@ -465,29 +477,32 @@ const yy = slide;
 					{...props}
 					disabled={readonly || props.readonly || disableMap[props.index]}
 				></Component>
-			{/key}
 		{/if}
 	</div>
+{/key}
 {/snippet}
 
-{#snippet Group(type: GroupType, blocks: Block[])}
-	<div
-		class:border-t={classes.border}
-		class:flex-col={type === 'col'}
-		class="flex {classes.border}"
-	>
+
+{#snippet handleBlocks(blocks)}
 		{#each blocks as block, i}
+
 			{#if block}
 				{#if block.renderType === 'block'}
-					{#key forceRerender[block.props.index]}
-						{@render Block(block.component, block.props)}
-					{/key}
+						{@render Block(block.component, block.props,block.props.index + i.toString()+forceRerender[block.props.index]?.toString())}
 				{:else if Array.isArray(block)}
-					{@render handleArr(block)}
+					{@render handleBlocks(block)}
 				{:else}
-					{@render Group(block.type, block.blocks)}
+					{@render handleBlocks(block.blocks)}
 				{/if}
-			{/if}
-		{/each}
+				{/if}
+
+{/each}
+{/snippet}
+
+{#snippet Group(type: GroupType, blocks: Block[],cls)}
+	<div
+class={{'flex-col justify-center':type.toLowerCase()==='col',[cls]:true,'flex':true}}
+	>
+	{@render handleBlocks(blocks)}
 	</div>
 {/snippet}
