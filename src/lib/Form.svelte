@@ -46,6 +46,7 @@ classes = Object.assign(defaultClasses, classes);
 let allProps: Readonly<Record<string, any>> = $state({});
 
 function handleValidationResponse(res: ReturnType<Validate>, currentValue = '') {
+	console.log(res)
 	const isValid = res.valid;
 	return {
 		valid: isValid,

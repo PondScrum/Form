@@ -363,15 +363,14 @@ let lastSelectVal = $state();
 		</div>
 	{:else}
 		<input
-			class:accent-white={!isValid}
-			class:text-white={!isValid}
+class={{'accent-white text-white': !isValid,
+       [cls]:true,[chosenBackgroundColor]:true      }}
 			{disabled}
 			tabindex={disabled ? -1 : tabindex}
 			{id}
 			autocomplete="off"
 			{...events}
 			type={inputType}
-			class="{cls}  {chosenBackgroundColor}"
 			use:mounted
 			use:tooltip={tooltipParams}
 		/>
