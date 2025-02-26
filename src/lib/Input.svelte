@@ -151,9 +151,8 @@ function causeInput(target: PossibleInputs) {
 
 let isValid = $state(false);
 function handleResult(result: string | FormValidationReturn<string>, target: PossibleInputs) {
-	isValid = !Boolean(result.tooltip);
+	isValid = result.valid;
 	const indexer = inputType == 'boolean' ? 'checked' : 'value';
-	console.log(result);
 	if (onlyValue) {
 		target[indexer] = result as string;
 		return;
@@ -372,7 +371,7 @@ let lastSelectVal = $state();
 			autocomplete="off"
 			{...events}
 			type={inputType}
-			class="{cls} zzz {chosenBackgroundColor}"
+			class="{cls}  {chosenBackgroundColor}"
 			use:mounted
 			use:tooltip={tooltipParams}
 		/>

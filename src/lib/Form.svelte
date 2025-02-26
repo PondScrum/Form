@@ -48,6 +48,7 @@ let allProps: Readonly<Record<string, any>> = $state({});
 function handleValidationResponse(res: ReturnType<Validate>, currentValue = '') {
 	const isValid = res.valid;
 	return {
+		valid: isValid,
 		value: isValid ? res.data : currentValue,
 		tooltip: isValid ? '' : res.data,
 		background_color: isValid ? '' : classes.invalid
