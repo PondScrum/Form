@@ -14,7 +14,6 @@ export const components = [
 	'Select',
 	'Date',
 	'Time',
-	'NestIndex',
 	'InlineSelect',
 	'Col',
 	'Row',
