@@ -83,7 +83,9 @@ export type ProvidedComponents = {
 	Text: StandardInput;
 	Select: OptionInput;
 	Date: StandardInput;
+	TextArea: StandardInput;
 	InlineSelect: OptionInput;
+	NestIndex: (...indexes: string[])=>string;
 	Boolean: StandardInput;
 	Col: (...items: (Block | Block[])[]) => GroupSpec;
 	Row: (...items: (Block | Block[])[]) => GroupSpec;

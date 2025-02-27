@@ -11,10 +11,10 @@ export const defaultClasses = {
 };
 export const components = [
 	'Text',
-	'Textarea',
 	'Select',
 	'Date',
 	'Time',
+	'NestIndex',
 	'InlineSelect',
 	'Col',
 	'Row',
