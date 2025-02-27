@@ -107,7 +107,6 @@ let combinedOnFocus;
 let events = $state();
 
 onMount(() => {
-	console.log(onMount,id)
 	const { onfocus, ...restEvents } = additionalEvents;
 	const requiredEvents = {
 		onfocus: (e: FocusEvent) => {
@@ -365,8 +364,7 @@ let lastSelectVal = $state();
 		</div>
 	{:else}
 		<input
-class={{'accent-white text-white': !isValid,
-       [cls]:true,[chosenBackgroundColor]:true      }}
+			class={{ 'text-white accent-white': !isValid, [cls]: true, [chosenBackgroundColor]: true }}
 			{disabled}
 			tabindex={disabled ? -1 : tabindex}
 			{id}

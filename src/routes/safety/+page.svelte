@@ -33,7 +33,7 @@ let loading = $state(false);
 >
 	<h1 class="top-0 z-100 px-4 pb-2 text-center text-2xl font-bold md:text-3xl">Safety Form</h1>
 	<div id="bound" class="grow overflow-hidden border-y border-gray-500">
-		<div {onscroll} class=" max-h-full overflow-auto pt-0 p-4">
+		<div {onscroll} class=" max-h-full overflow-auto p-4 pt-0">
 			<Form
 				deleteOnHide={true}
 				globalKey={getValidationChange()}

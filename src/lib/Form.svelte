@@ -29,16 +29,16 @@ let {
 	svelteTransition = slide
 }: Props = $props();
 const defaultClasses = {
-						input: `font-mono font-normal h-8 rounded  px-2`,
-						selected: 'bg-blue-500',
-						header: 'text-2xl tracking-tight border-b pb-1 mx-auto',
-						border: 'border-gray-500',
-						divide:'divide-gray-500',
-						group: 'border-gray-200  border-b pb-6',
-						block: 'flex-wrap pt-4 pr-4  ',
-						invalid: 'bg-red-700/75',
-						label: 'text-xl pb-1 font-semibold'
-					};
+	input: `font-mono font-normal h-8 rounded  px-2`,
+	selected: 'bg-blue-500',
+	header: 'text-2xl tracking-tight border-b pb-1 mx-auto',
+	border: 'border-gray-500',
+	divide: 'divide-gray-500',
+	group: 'border-gray-200  border-b pb-6',
+	block: 'flex-wrap pt-4 pr-4  ',
+	invalid: 'bg-red-700/75',
+	label: 'text-xl pb-1 font-semibold'
+};
 
 classes = Object.assign(defaultClasses, classes);
 
@@ -61,7 +61,6 @@ function handleValidationResponse(res: ReturnType<Validate>, currentValue = '') 
 }
 
 import Input from './Input.svelte';
-
 
 const components = [
 	'Text',
@@ -95,7 +94,10 @@ const match: Match = (value: string | boolean, block: Block | Block[]) => {
 		pivots[valueIndex] ??= {};
 		pivots[valueIndex][uid] = blocks; // or block?
 		const show = (index: string) => {
-			tick().then(()=>(lastShown[index]=true))
+			tick().then(() => {
+				lastShown[index] = true;
+			});
+
 			hidden[index] && events.show?.(index);
 			delete hidden[index];
 		};
@@ -118,6 +120,10 @@ const match: Match = (value: string | boolean, block: Block | Block[]) => {
 			if (!hidden[index]) {
 				hidden[index] = true;
 				// setInternalValue(index,'');
+				tick().then(() => {
+					lastShown[index] = false;
+				});
+
 				events.hide?.(index);
 				return index;
 			}
@@ -186,18 +192,24 @@ function setup() {
 		Object.fromEntries(
 			components.map((type) => {
 				const block: Input & OptionInput = (index, validate, ...args) => {
-					const props = args.slice(-1)[0] || {};
-					const options = args[0];
-					props.options = options;
+					// const props = args.slice(-1)[0] || {};
+					// const options = args[0];
+					const requiresOptions = type.toLowerCase().includes('select');
+					const thirdParam = args[0];
+					const fourthParam = args[1];
+					const props = (requiresOptions ? fourthParam : thirdParam) || {};
+					const options = requiresOptions ? thirdParam : null;
+					options && (props.options = options);
 					index = index.toLowerCase();
 					const oc = (value: string, focused: boolean) =>
 						inputChanged(index, value, focused, validate, props);
 
 					const nestRes = handleNested(index, allValues);
 					allProps[index] = props;
-					props.label??={}
-					props.input??={}
-					props.input.class??= classes.input + (classes.border && ' border ' + classes.border) || ''
+					props.label ??= {};
+					props.input ??= {};
+					props.input.class ??=
+						classes.input + (classes.border && ' border ' + classes.border) || '';
 					const res = {
 						renderType: 'block',
 						component: Input,
@@ -393,10 +405,10 @@ function indexToHeader(str: string) {
 let componentMap: Record<string, InputComponentPublicFns> = $state({});
 setContext('border', classes.border);
 const yy = slide;
-let mounted=$state(false)
-onMount(()=>{
-	mounted=true
-})
+let mounted = $state(false);
+onMount(() => {
+	mounted = true;
+});
 </script>
 
 <div class="relative h-min w-full" in:scale={{ duration: 100, opacity: 0.2, start: 0.98 }}>
@@ -414,62 +426,56 @@ onMount(()=>{
 	</div>
 </div>
 
-
-{#snippet handleArr(items: Block | Block[],recur=false)}
+{#snippet handleArr(items: Block | Block[], recur = false)}
 	{#each items as renderSpec}
 		{#if renderSpec}
-{#if Array.isArray(renderSpec)}
-{@render handleArr(renderSpec,true)}
-{:else if renderSpec.renderType == 'group'}
+			{#if Array.isArray(renderSpec)}
+				{@render handleArr(renderSpec, true)}
+			{:else if renderSpec.renderType == 'group'}
 				{@const { type, blocks } = renderSpec}
-				{@render Group(type, blocks,!recur && classes.group)}
+				{@render Group(type, blocks, !recur && classes.group)}
 			{:else}
-<!-- {@render Group('col',[renderSpec])} -->
-	{#if !recur && renderSpec.renderType==='block'}
-{@render Group('col',[renderSpec],!recur && classes.group)}
-{:else}
-				{@const { component, props } = renderSpec}
+				<!-- {@render Group('col',[renderSpec])} -->
+				{#if !recur && renderSpec.renderType === 'block'}
+					{@render Group('col', [renderSpec], !recur && classes.group)}
+				{:else}
+					{@const { component, props } = renderSpec}
 					{@render Block(component, props)}
-{/if}
+				{/if}
 			{/if}
 		{/if}
 	{/each}
 {/snippet}
 
-
-
-{JSON.stringify(lastShown)}
-
-{#snippet Block(Component: Snippet | 'header', props: InputProps,keys)}
-{#key lastShown[props.index]}
-	<div
-	in:fade={{ duration:275,delay:200 }}
-class={{
-	
-	[props.block?.class || classes.block]: true,
-	' flex-col': !props.row,
-	'flex':true
-}}
-	>
-		{#if Component === 'header'}
-			<p class={classes.header}>
-				{props.index}
-				<!-- {props.header} -->
-			</p>
-		{:else}
-			{@const { hide, alias, html } = props.label}
-			{#if !hide || alias}
-				<label
-					for={props.inputType}
-					class={props.label.class || classes.label + ` ${props.label.additionalClass}`}
-				>
-					{#if html}
-						{@html html}
-					{:else}
-						{alias || indexToHeader(props?.index || '')}
-					{/if}
-				</label>
-			{/if}
+{#snippet Block(Component: Snippet | 'header', props: InputProps, keys)}
+	{#key lastShown[props.index]}
+		<div
+			in:slide={{ duration: 175 }}
+			class={{
+				[props.block?.class || classes.block]: true,
+				' flex-col': !props.row,
+				flex: true
+			}}
+		>
+			{#if Component === 'header'}
+				<p class={classes.header}>
+					{props.index}
+					<!-- {props.header} -->
+				</p>
+			{:else}
+				{@const { hide, alias, html } = props.label}
+				{#if !hide || alias}
+					<label
+						for={props.inputType}
+						class={props.label.class || classes.label + ` ${props.label.additionalClass}`}
+					>
+						{#if html}
+							{@html html}
+						{:else}
+							{alias || indexToHeader(props?.index || '')}
+						{/if}
+					</label>
+				{/if}
 				<Component
 					{classes}
 					bind:this={componentMap[props.index]}
@@ -477,32 +483,31 @@ class={{
 					{...props}
 					disabled={readonly || props.readonly || disableMap[props.index]}
 				></Component>
-		{/if}
-	</div>
-{/key}
+			{/if}
+		</div>
+	{/key}
 {/snippet}
-
 
 {#snippet handleBlocks(blocks)}
-		{#each blocks as block, i}
-
-			{#if block}
-				{#if block.renderType === 'block'}
-						{@render Block(block.component, block.props,block.props.index + i.toString()+forceRerender[block.props.index]?.toString())}
-				{:else if Array.isArray(block)}
-					{@render handleBlocks(block)}
-				{:else}
-					{@render handleBlocks(block.blocks)}
-				{/if}
-				{/if}
-
-{/each}
+	{#each blocks as block, i}
+		{#if block}
+			{#if block.renderType === 'block'}
+				{@render Block(
+					block.component,
+					block.props,
+					block.props.index + i.toString() + forceRerender[block.props.index]?.toString()
+				)}
+			{:else if Array.isArray(block)}
+				{@render handleBlocks(block)}
+			{:else}
+				{@render handleBlocks(block.blocks)}
+			{/if}
+		{/if}
+	{/each}
 {/snippet}
 
-{#snippet Group(type: GroupType, blocks: Block[],cls)}
-	<div
-class={{'flex-col justify-center':type.toLowerCase()==='col',[cls]:true,'flex':true}}
-	>
-	{@render handleBlocks(blocks)}
+{#snippet Group(type: GroupType, blocks: Block[], cls)}
+	<div class={{ 'flex-col justify-center': type.toLowerCase() === 'col', [cls]: true, flex: true }}>
+		{@render handleBlocks(blocks)}
 	</div>
 {/snippet}

@@ -102,7 +102,6 @@ function onceATick(id) {
 		singletonTracker[id].instance?.hide();
 		const items = Object.entries(info.options).map(([singleId, e]) => {
 			const instance = tippy(singletonTracker[id].elems[singleId], e);
-			console.log(instance.id);
 			info.instanceMap[instance.id] = { index: singleId, instance };
 			return instance;
 		});
