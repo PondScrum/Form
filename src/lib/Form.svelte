@@ -98,7 +98,7 @@ const match: Match = (value: string | boolean, block: Block | Block[]) => {
 				lastShown[index] = true;
 			});
 
-			hidden[index] && events.show?.(index);
+			hidden[index] && events.show?.(handleNested(index).publicIndex);
 			delete hidden[index];
 		};
 		const allBlocks = blocks
@@ -124,7 +124,7 @@ const match: Match = (value: string | boolean, block: Block | Block[]) => {
 					lastShown[index] = false;
 				});
 
-				events.hide?.(index);
+				events.hide?.(handleNested(index).publicIndex);
 				return index;
 			}
 		};
@@ -159,18 +159,19 @@ function cleanupEmptyObjects(obj) {
 	});
 	return obj;
 }
+const NEST_DELIMETER = ';';
 
 const buildTimeComponents = {
 	Pivot: pivot,
 	Match: match,
 	NestIndex: (...indexes) => {
 		const finalIndex = indexes.slice(-1)[0];
-		nestMap[indexes[0]] = indexes.join('_');
-		return '_' + indexes.join('_');
+		nestMap[indexes[0]] = indexes.join(NEST_DELIMETER);
+		return NEST_DELIMETER + indexes.join(NEST_DELIMETER);
 	}
 };
 function isNested(index: string) {
-	return index?.[0] === '_';
+	return index?.[0] === NEST_DELIMETER;
 }
 
 const isGroup = (type: string) => ['Col', 'Row'].includes(type);
@@ -295,16 +296,16 @@ function getValue(originalIndex) {
 	const res = handleNested(originalIndex, allValues);
 	return res.ref[res.index];
 }
-function handleNested(index, ref) {
-	if (!isNested(index)) return { ref, index };
-	const allIndexes = index.split('_').filter((e) => e);
+function handleNested(index, ref = {}) {
+	if (!isNested(index)) return { ref, index, publicIndex: index };
+	const allIndexes = index.split(NEST_DELIMETER).filter((e) => e);
 	const rootIndex = allIndexes[0];
 	const finalIndex = allIndexes.slice(-1)[0];
 	allIndexes.slice(0, allIndexes.length - 1).forEach((e) => {
 		ref[e] ??= {};
 		ref = ref[e];
 	});
-	return { ref, index: finalIndex, rootIndex };
+	return { ref, index: finalIndex, rootIndex, publicIndex: allIndexes };
 }
 
 function inputChanged(
@@ -317,6 +318,7 @@ function inputChanged(
 	const RO = readonly || props?.readonly;
 	const res = handleNested(index, allValues);
 	const originalIndex = index;
+	const publicIndex = res.publicIndex;
 
 	let dataRef = res.ref;
 	index = res.index;
@@ -342,9 +344,8 @@ function inputChanged(
 
 		dataRef[index] = convertedResponse.value;
 		//allValues[originalIndex]=convertedResponse.value;
-
 		const eventToRun = events[validationRes.valid ? 'valid' : 'error'];
-		!RO && eventToRun && eventToRun(index, validationRes.data);
+		!RO && eventToRun && eventToRun(publicIndex, validationRes.data);
 		tick().then(() => {
 			render();
 			onChange(
