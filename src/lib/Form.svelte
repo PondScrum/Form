@@ -1,19 +1,34 @@
 <script lang="ts">
 import 'tippy.js/animations/scale-subtle.css';
 import 'tippy.js/dist/tippy.css';
-import { onMount, setContext, tick, type Snippet } from 'svelte';
+import Input from './Input.svelte';
+import { onMount, setContext, tick, type Component, type Snippet } from 'svelte';
 import { fade, scale, slide } from 'svelte/transition';
 import type {
-	BaseBlock,
 	Block,
+	GroupSpec,
+	BlockSpec,
 	GroupType,
+	Index,
 	InputComponentPublicFns,
 	InputProps,
 	Pivot,
 	Props,
 	ProvidedComponents,
-	Validate
+	Validate,
+	RenderArrItems,
+	Match,
+	OptionInput,
+	InternalInputProps,
+	Classes,
+	AllValues,
+	StandardInput,
+	SelectOptions,
+	ChangeResponse
 } from './types/internal.ts';
+
+import { components, defaultClasses } from './Form';
+import type { PublicInputProps } from './types/public';
 
 let {
 	readonly = false,
@@ -26,63 +41,32 @@ let {
 	initialValues,
 	classes = {},
 	globalKey,
-	svelteTransition = slide
+	svelteTransition = (e) => slide(e, { duration: 125 })
 }: Props = $props();
-const defaultClasses = {
-	input: `font-mono font-normal h-8 rounded  px-2`,
-	selected: 'bg-blue-500',
-	header: 'text-2xl tracking-tight border-b pb-1 mx-auto',
-	border: 'border-gray-500',
-	divide: 'divide-gray-500',
-	group: 'border-gray-200  border-b pb-6',
-	block: 'flex-wrap pt-4 pr-4  ',
-	invalid: 'bg-red-700/75',
-	label: 'text-xl pb-1 font-semibold'
-};
 
 classes = Object.assign(defaultClasses, classes);
 
-//deleteOnHide prop should delete the values at allValue provide time, so it doesnt wipe for users, only on consumption
-
-// type DeepReadonly<T> = T extends Function ? T :
-//   T extends object ? { readonly [K in keyof T]: DeepReadonly<T[K]> } :
-//   T;
-
+const globalClasses = classes as Classes;
 let allProps: Readonly<Record<string, any>> = $state({});
+let validityMap: Record<string, boolean> = $state({});
 
-function handleValidationResponse(res: ReturnType<Validate>, currentValue = '') {
+function handleValidationResponse(res: ReturnType<Validate>, currentValue = ''): ChangeResponse {
 	const isValid = res.valid;
 	return {
 		valid: isValid,
 		value: isValid ? res.data : currentValue,
 		tooltip: isValid ? '' : res.data,
-		background_color: isValid ? '' : classes.invalid
+		background_color: isValid ? '' : globalClasses.invalid
 	};
 }
 
-import Input from './Input.svelte';
-
-const components = [
-	'Text',
-	'Textarea',
-	'Select',
-	'Date',
-	'Time',
-	'InlineSelect',
-	'Col',
-	'Row',
-	'Boolean',
-	'Header',
-	'TextArea'
-];
-
 let pivots: Record<string, Record<string, Block[]>> = $state({});
-let allValues = $state(initialValues || {});
+let allValues: AllValues = $state(initialValues || {});
 let renderedComponents: Block[] = $state([]);
 // let hidden: string[] = $state([]);
 
 let hidden: Record<string, boolean> = $state({});
-let lastShown = $state({});
+let lastShown: Record<string, boolean> = $state({});
 
 const match: Match = (value: string | boolean, block: Block | Block[]) => {
 	let usedBool = typeof value === 'boolean';
@@ -135,26 +119,31 @@ const match: Match = (value: string | boolean, block: Block | Block[]) => {
 
 const pivot: Pivot = (valueIndex, ...matches) => {
 	pivots[valueIndex] = {};
-	const res = matches
+	const res: RenderArrItems = matches
 		.map((e) => e(valueIndex))
 		.filter((e) => e)
 		.flat();
 
-	const flatten = (items: Block[]) =>
-		items.every((e) => e.renderType) ? items : flatten(items.flat());
+	const flatten = (items: (Block | Block[])[]): Block[] =>
+		items.every((e) => !Array.isArray(e) && e.renderType)
+			? (items as Block[])
+			: flatten(items.flat());
+
 	return flatten(res);
 };
-const nestMap = $state({});
 
-function cleanupEmptyObjects(obj) {
-	const isObj = (o) => typeof o === 'object' && !Array.isArray(obj);
-	if (!isObj(obj)) return;
-	Object.keys(obj).forEach((k) => {
-		if (!isObj(obj[k])) return;
-		if (Object.keys(obj[k]).length === 0) {
-			delete obj[k];
+function cleanupEmptyObjects<T extends any>(obj: T): T {
+	const getObj: (t: any) => Record<string, any> | undefined = (t) =>
+		typeof t === 'object' && !Array.isArray(t) && t;
+	const o = getObj(obj);
+	if (!o) return obj;
+	Object.keys(o).forEach((k) => {
+		const next = getObj(o[k]);
+		if (!next) return;
+		if (Object.keys(next).length === 0) {
+			delete o[k];
 		} else {
-			cleanupEmptyObjects(obj[k]);
+			cleanupEmptyObjects(next);
 		}
 	});
 	return obj;
@@ -164,9 +153,7 @@ const NEST_DELIMETER = ';';
 const buildTimeComponents = {
 	Pivot: pivot,
 	Match: match,
-	NestIndex: (...indexes) => {
-		const finalIndex = indexes.slice(-1)[0];
-		nestMap[indexes[0]] = indexes.join(NEST_DELIMETER);
+	NestIndex: (...indexes: string[]) => {
 		return NEST_DELIMETER + indexes.join(NEST_DELIMETER);
 	}
 };
@@ -182,9 +169,6 @@ function render() {
 	if (wrappedComponents) {
 		setRendered(toRender);
 	}
-	// tick().then(() => {
-	// 	lastShown = {};
-	// });
 }
 
 function setup() {
@@ -192,36 +176,52 @@ function setup() {
 		buildTimeComponents,
 		Object.fromEntries(
 			components.map((type) => {
-				const block: Input & OptionInput = (index, validate, ...args) => {
-					// const props = args.slice(-1)[0] || {};
-					// const options = args[0];
+				const block = (
+					index: string,
+					validate: Validate,
+					thirdParam: undefined | InputProps | SelectOptions,
+					fourthParam: undefined | InputProps
+				): BlockSpec => {
 					const requiresOptions = type.toLowerCase().includes('select');
-					const thirdParam = args[0];
-					const fourthParam = args[1];
-					const props = (requiresOptions ? fourthParam : thirdParam) || {};
-					const options = requiresOptions ? thirdParam : null;
-					options && (props.options = options);
+					const publicProps = ((requiresOptions ? fourthParam : thirdParam) ||
+						{}) as PublicInputProps;
+					const options = (requiresOptions && thirdParam) as SelectOptions | undefined;
 					index = index.toLowerCase();
+					const fullPublicProps: PublicInputProps = Object.assign(
+						{
+							label: {},
+							input: {},
+							row: false,
+							readonly: false,
+							key: ''
+						},
+						structuredClone(publicProps)
+					);
+					const indexRes = handleNested(index);
+					fullPublicProps.input.class ??=
+						(globalClasses.input || '') +
+						((globalClasses.border && ' border ' + globalClasses.border) || '');
 					const oc = (value: string, focused: boolean) =>
-						inputChanged(index, value, focused, validate, props);
-
+						inputChanged(index, value, focused, validate);
 					const nestRes = handleNested(index, allValues);
-					allProps[index] = props;
-					props.label ??= {};
-					props.input ??= {};
-					props.input.class ??=
-						classes.input + (classes.border && ' border ' + classes.border) || '';
-					const res = {
+
+					const props: InternalInputProps = {
+						index,
+						id: `${type}-${index}`,
+						valueChanged: oc,
+						publicIndex: indexRes.publicIndex,
+						initialValue: nestRes.ref[nestRes.index] || '',
+						inputType: type.toLowerCase(),
+						options,
+						...fullPublicProps
+					};
+
+					allProps[index] = props; //only assignment
+
+					const res: BlockSpec = {
 						renderType: 'block',
 						component: Input,
-						props: {
-							initialValue: nestRes.ref[nestRes.index] || '',
-							id: type.toLowerCase() + '-' + index,
-							index,
-							valueChanged: oc,
-							inputType: type.toLowerCase(),
-							...props
-						}
+						props
 					};
 					return res;
 				};
@@ -250,30 +250,23 @@ onMount(() => {
 	tick().then(render);
 });
 
-function collectBlocks(obj: Block): BaseBlock[] {
-	let allBlocks: BaseBlock[] = [];
-	if (!obj) return allBlocks;
+function collectBlocks(obj: BlockSpec | GroupSpec): BlockSpec[] {
+	if (!obj) return [];
 	if (typeof obj !== 'object') return [];
 	if ('blocks' in obj) {
 		const res = obj.blocks.map((e) => collectBlocks(e)).flat() as {
 			renderType: 'block';
-			props: InputProps;
+			props: InternalInputProps;
 			component: Snippet;
 		}[];
 		return res;
 	} else if (obj.renderType === 'block') {
-		allBlocks = [...allBlocks, obj];
-		return allBlocks as { renderType: 'block'; props: InputProps; component: Snippet }[];
+		return [obj];
 	}
 	return [];
 }
 
-let validityMap: Record<string, boolean> = $state({});
-
 function determineValidity() {
-	// const nonHiddenFields = Object.keys(allValues).filter((e) => !(e in hidden) && !(e in nestMap));
-	// return nonHiddenFields.every((k) => validityMap[k]);
-
 	const nonHiddenFields = Object.keys(validityMap).filter((e) => !(e in hidden));
 	return nonHiddenFields.every((k) => validityMap[k]);
 }
@@ -288,15 +281,15 @@ function provideAllValues() {
 			delete toDeleteFrom[nestRes.index];
 		});
 	}
-	cleanupEmptyObjects(res);
+	DELETE_EMPTY_NESTED && cleanupEmptyObjects(res);
 	return res;
 }
 
-function getValue(originalIndex) {
+function getValue(originalIndex: string) {
 	const res = handleNested(originalIndex, allValues);
 	return res.ref[res.index];
 }
-function handleNested(index, ref = {}) {
+function handleNested(index: string, ref: Record<string, any> = {}) {
 	if (!isNested(index)) return { ref, index, publicIndex: index };
 	const allIndexes = index.split(NEST_DELIMETER).filter((e) => e);
 	const rootIndex = allIndexes[0];
@@ -312,9 +305,10 @@ function inputChanged(
 	index: string,
 	value: string,
 	focused: boolean,
-	validate: Validate,
-	props: InputProps
-) {
+	validate: Validate
+): ChangeResponse {
+	let validationRes = { valid: true, data: value };
+	const props: Readonly<InputProps> = allProps[index];
 	const RO = readonly || props?.readonly;
 	const res = handleNested(index, allValues);
 	const originalIndex = index;
@@ -333,7 +327,6 @@ function inputChanged(
 				})
 			);
 		}
-		let validationRes = { valid: true, data: value };
 		if (!RO) {
 			validationRes = validate(value, focused);
 		}
@@ -362,26 +355,32 @@ function inputChanged(
 		console.error(e);
 		if (e instanceof Error) onJSError?.(e);
 	}
+	return handleValidationResponse(validationRes, value);
 }
 
 let wrappedComponents: ProvidedComponents;
 
-export function setInternalValue(index: string, value: string) {
+function indexToString(index: Index): string {
+	return Array.isArray(index) ? NEST_DELIMETER + index.join(NEST_DELIMETER) : index;
+}
+
+export function setInternalValue(idx: Index, value: string) {
+	const index = indexToString(idx);
 	tick().then(() => {
 		const component = componentMap[index];
 		if (!component) {
 			console.log(
 				`Index does not exist as provided render item, force setting value: ${value} at index ${index}`
 			);
-			inputChanged(index, value, true, (a) => ({ valid: true, data: a }), {});
+			inputChanged(index, value, true, (a) => ({ valid: true, data: a }));
 			return;
 		}
 		componentMap[index]?.setValue(value);
 	});
 }
 
-export function setDisabled(index: string, state: boolean) {
-	disableMap[index] = state;
+export function setDisabled(index: Index, state: boolean) {
+	disableMap[indexToString(index)] = state;
 }
 
 function setRendered(v: Block[]) {
@@ -404,71 +403,54 @@ function indexToHeader(str: string) {
 		.join(' ');
 }
 let componentMap: Record<string, InputComponentPublicFns> = $state({});
-setContext('border', classes.border);
-const yy = slide;
-let mounted = $state(false);
-onMount(() => {
-	mounted = true;
-});
 </script>
 
 <div class="relative h-min w-full" in:scale={{ duration: 100, opacity: 0.2, start: 0.98 }}>
 	<div class="">
-		<!-- {#if title} -->
-		<!-- 	<h1 class="pb-3 text-center text-3xl font-bold underline"> -->
-		<!-- 		{title} -->
-		<!-- 	</h1> -->
-		<!-- {/if} -->
-		<div class="">
-			{#key globalKey}
-				{@render handleArr(renderedComponents)}
-			{/key}
-		</div>
+		{#key globalKey}
+			{@render handleArr(renderedComponents)}
+		{/key}
 	</div>
 </div>
 
-{#snippet handleArr(items: Block | Block[], recur = false)}
+{#snippet handleArr(items: Block[], recur = false)}
 	{#each items as renderSpec}
 		{#if renderSpec}
 			{#if Array.isArray(renderSpec)}
 				{@render handleArr(renderSpec, true)}
 			{:else if renderSpec.renderType == 'group'}
 				{@const { type, blocks } = renderSpec}
-				{@render Group(type, blocks, !recur && classes.group)}
+				{@render Group(type, blocks, !recur ? globalClasses.group : '')}
+			{:else if !recur && renderSpec.renderType === 'block'}
+				{@render Group('col', [renderSpec], !recur && globalClasses.group)}
 			{:else}
-				<!-- {@render Group('col',[renderSpec])} -->
-				{#if !recur && renderSpec.renderType === 'block'}
-					{@render Group('col', [renderSpec], !recur && classes.group)}
-				{:else}
-					{@const { component, props } = renderSpec}
-					{@render Block(component, props)}
-				{/if}
+				{@const { component, props } = renderSpec}
+				{@render Block(component, props)}
 			{/if}
 		{/if}
 	{/each}
 {/snippet}
 
-{#snippet Block(Component: Snippet | 'header', props: InputProps, keys)}
-	{#key lastShown[props.index]}
+{#snippet Block(Cmp: Component<any> | 'header', props: InternalInputProps)}
+	{#key lastShown[props.index] || forceRerender[props.index] || props.index}
 		<div
-			in:slide={{ duration: 175 }}
+			in:svelteTransition
 			class={{
-				[props.block?.class || classes.block]: true,
+				[globalClasses.block]: globalClasses.block,
 				' flex-col': !props.row,
 				flex: true
 			}}
 		>
-			{#if Component === 'header'}
-				<p class={classes.header}>
+			{#if Cmp === 'header'}
+				<p class={globalClasses.header}>
 					{props.index}
-					<!-- {props.header} -->
 				</p>
 			{:else}
 				{@const { hide, alias, html } = props.label}
 				{#if !hide || alias}
 					<label
 						for={props.inputType}
-						class={props.label.class || classes.label + ` ${props.label.additionalClass}`}
+						class={props.label.class || globalClasses.label + ` ${props.label.additionalClass}`}
 					>
 						{#if html}
 							{@html html}
@@ -477,29 +459,25 @@ onMount(() => {
 						{/if}
 					</label>
 				{/if}
-				<Component
+				<Cmp
 					{classes}
 					bind:this={componentMap[props.index]}
-					cls={props.input.class || classes.input}
+					cls={props.input.class || globalClasses.input}
 					{...props}
 					disabled={readonly || props.readonly || disableMap[props.index]}
-				></Component>
+				></Cmp>
 			{/if}
 		</div>
 	{/key}
 {/snippet}
 
-{#snippet handleBlocks(blocks)}
-	{#each blocks as block, i}
+{#snippet handleBlocks(blocks: Block[])}
+	{#each blocks as block}
 		{#if block}
-			{#if block.renderType === 'block'}
-				{@render Block(
-					block.component,
-					block.props,
-					block.props.index + i.toString() + forceRerender[block.props.index]?.toString()
-				)}
-			{:else if Array.isArray(block)}
+			{#if Array.isArray(block)}
 				{@render handleBlocks(block)}
+			{:else if block.renderType === 'block'}
+				{@render Block(block.component, block.props)}
 			{:else}
 				{@render handleBlocks(block.blocks)}
 			{/if}
@@ -507,7 +485,7 @@ onMount(() => {
 	{/each}
 {/snippet}
 
-{#snippet Group(type: GroupType, blocks: Block[], cls)}
+{#snippet Group(type: GroupType, blocks: Block[], cls: string)}
 	<div class={{ 'flex-col justify-center': type.toLowerCase() === 'col', [cls]: true, flex: true }}>
 		{@render handleBlocks(blocks)}
 	</div>

@@ -1,38 +1,92 @@
-import type { Block, ProvidedComponents, ValidityEvent, VisibilityEvent } from './internal';
+import type { TransitionConfig } from 'svelte/transition';
+import type {
+	Block,
+	ValidityEvent,
+	VisibilityEvent,
+	Index,
+	Classes,
+	BlockSpec,
+	Validate,
+	SelectOptions,
+	GroupSpec,
+	Pivot,
+	Match
+} from './internal';
+import type { HTMLInputAttributes } from 'svelte/elements';
 
 export type ProvidedMethods = {
-	setInternalValue: (index: string, valid: string) => void;
-	setDisabled: (index: string, state: boolean) => void;
+	setInternalValue: (index: Index, valid: string) => void;
+	setDisabled: (index: Index, state: boolean) => void;
 };
 export type OnChange = (
-	allValues: Record<string, string>,
-	lastInputInfo: { index: string; value: string; focused: boolean },
+	allValues: AllValues,
+	lastInputInfo: { index: Index; value: string; focused: boolean },
 	methods: ProvidedMethods
 ) => void;
 
-export type GetRenderedItems = (
-	components: ProvidedComponents,
-	allValues: Record<string, string>
-) => Block[];
+export type GetRenderedItems = (components: ProvidedComponents, allValues: AllValues) => Block[];
+
+export type AllValues = {
+	[x: string]: AllValues | string;
+};
 
 export interface Props {
-	readonly: boolean;
+	readonly?: boolean;
 	valid: boolean;
-	deleteOnHide: boolean;
+	deleteOnHide?: boolean;
 	onJSError: (e: Error) => void;
 	getRenderedItems: GetRenderedItems;
 	onChange: OnChange;
-	initialValues: Record<string, string>;
+	initialValues?: AllValues;
 	events: Partial<{
 		error: ValidityEvent;
 		valid: ValidityEvent;
 		hide: VisibilityEvent;
 		show: VisibilityEvent;
 	}>;
-	classes: {
-		input: string;
-		label: string;
-		invalid: string;
-		block: string;
-	};
+	classes?: Partial<Classes>;
+	globalKey?: string;
+	svelteTransition?: (element: HTMLElement) => TransitionConfig;
 }
+
+type WrapperProps = Partial<{
+	class: string;
+	alias: string;
+	hide: boolean;
+	additionalClass: string;
+}>;
+
+export type PublicInputProps = {
+	key: string;
+	input: WrapperProps & {
+		elementAttributes?: HTMLInputAttributes; //HTMLInputAttributes
+	};
+	label: WrapperProps & {
+		html?: string;
+	};
+	readonly: boolean;
+	row: boolean;
+};
+
+export type InputProps = Partial<PublicInputProps>;
+
+export type StandardInput = (index: string, validate: Validate, props?: InputProps) => BlockSpec;
+
+export type OptionInput = (
+	index: string,
+	validate: Validate,
+	options: SelectOptions,
+	props?: InputProps
+) => Block;
+export type ProvidedComponents = {
+	Time: StandardInput;
+	Text: StandardInput;
+	Select: OptionInput;
+	Date: StandardInput;
+	InlineSelect: OptionInput;
+	Boolean: StandardInput;
+	Col: (...items: (Block | Block[])[]) => GroupSpec;
+	Row: (...items: (Block | Block[])[]) => GroupSpec;
+	Pivot: Pivot;
+	Match: Match;
+};

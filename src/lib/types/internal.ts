@@ -1,27 +1,32 @@
-import type { Snippet, SvelteComponent } from 'svelte';
+import type { Component, Snippet, SvelteComponent } from 'svelte';
+import type { PublicInputProps } from './public';
 export type { Props } from './public';
+export type { AllValues, OptionInput, StandardInput, ProvidedComponents } from './public';
 
-export type AdditionalInputProps = {
-	key: string;
-	input: {
-		class: string;
-	};
-	label: {
-		class: string;
-		alias: string;
-		html: string;
-		hide?: true;
-	};
-	col?: true;
-	readonly?: true;
-};
+export type Index = string | string[];
 
 export type InputComponentPublicFns = SvelteComponent<Record<string, (value: string) => void>>;
 
-export type InputProps = { index: string; inputType: string } & AdditionalInputProps;
+export type ChangeResponse = {
+	valid: boolean;
+	value: string;
+	tooltip: string;
+	background_color: string;
+};
+export type ValueChanged = (value: string, focused: boolean) => ChangeResponse;
 
-export type VisibilityEvent = (index: string) => void;
-export type ValidityEvent = (index: string, value: string) => void;
+export type InputProps = {
+	options?: SelectOptions;
+	index: string;
+	inputType: string;
+	initialValue: string;
+	id: string;
+	valueChanged: ValueChanged;
+	publicIndex: string | string[];
+} & PublicInputProps;
+
+export type VisibilityEvent = (index: Index) => void;
+export type ValidityEvent = (index: Index, value: string) => void;
 
 export type DataToAssign = string;
 export type TooltipMessage = string;
@@ -31,36 +36,34 @@ export type Validate = (
 ) => { valid: true; data: DataToAssign } | { valid: false; data: TooltipMessage };
 
 export type RenderType = 'group' | 'block';
-export type GroupType = 'row' | 'col';
-export type Block =
-	| undefined
-	| { renderType: 'block'; props: InputProps; component: Snippet }
-	| { renderType: 'group'; type: GroupType; blocks: Block[] };
-export type SelectOptions = Record<string, string>;
 
-export type StandardInput = (index: string, validate: Validate, props: AdditionalProps) => Block;
-export type OptionInput = (
-	index: string,
-	validate: Validate,
-	options: SelectOptions,
-	props: AdditionalProps
-) => Block;
+export type GroupType = 'row' | 'col';
+
+export type Classes = {
+	header: string;
+	group: string;
+	input: string;
+	label: string;
+	invalid: string;
+	block: string;
+	border: string;
+};
+export type InternalInputProps = InputProps;
+export type BlockSpec = {
+	renderType: 'block';
+	props: InternalInputProps;
+	component: Component<any>;
+};
+export type GroupSpec = { renderType: 'group'; type: GroupType; blocks: RenderArrItems };
+
+export type RenderArrItems = Block[];
+
+export type Block = BlockSpec | GroupSpec;
+
+export type SelectOptions = Record<string, string>;
 
 export type Match = (value: boolean | string, block: Block | Block[]) => (index: string) => Block[];
 
-export type Pivot = (index: string, ...Match: ReturnType<Match>[]) => Block;
+export type Pivot = (index: string, ...Match: ReturnType<Match>[]) => RenderArrItems;
 
 export type Group = (...blocks: Block[]) => Block;
-export type ProvidedComponents = {
-	Text: StandardInput;
-	Select: OptionInput;
-	Date: StandardInput;
-	InlineSelect: OptionInput;
-	Boolean: StandardInput;
-	Col: Block;
-	Row: Block;
-	Pivot: Pivot;
-	Match: Match;
-};
-
-export type BaseBlock = { renderType: 'block'; props: InputProps; component: Snippet };
