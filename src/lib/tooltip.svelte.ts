@@ -19,7 +19,6 @@ export type TooltipParams = {
 const niceHTML = (c) =>
 	c && `<h1 class="text-xs xl:text-lg capitalize py-1 tracking-tight">${c}</h1>`;
 export function tooltip(element: HTMLElement, getOptions: () => TooltipParams) {
-	console.log(element.id);
 	let showingTimeout;
 	let showing = false;
 	const tooltip = tippy(element, {});
@@ -62,7 +61,7 @@ export function tooltip(element: HTMLElement, getOptions: () => TooltipParams) {
 			tooltip.disable();
 		}
 	});
-	return tooltip.destroy;
+	return { destroy: tooltip.destroy };
 }
 
 //---------- singleton ---------------//

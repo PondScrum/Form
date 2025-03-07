@@ -186,7 +186,7 @@ let hideTT = $state(false);
 export function hideTooltip(v) {
 	if (v === hideTT) return;
 	hideTT = v;
-	v && (tooltipShown=false)
+	v && (tooltipShown = false);
 }
 
 export const elemId = id;
@@ -201,7 +201,7 @@ let tooltipParams = () => ({
 	placement: tooltipSide,
 	allowHTML: true,
 	delay: tooltipDelay,
-	duration: [wasLastTooltipShowing() ? 0 : 75,0],
+	duration: [wasLastTooltipShowing() ? 0 : 75, 0],
 	animation: 'scale-subtle',
 	inertia: false,
 	popperOptions: {

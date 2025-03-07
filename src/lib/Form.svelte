@@ -169,6 +169,11 @@ function render() {
 	if (wrappedComponents) {
 		setRendered(toRender);
 	}
+	tick().then(() => {
+		allIndexes = Object.entries(componentMap)
+			.map(([index, e]) => e && [index, document.getElementById(e.elemId), e])
+			.filter((e) => e);
+	});
 }
 
 function setup() {
@@ -404,21 +409,33 @@ function indexToHeader(str: string) {
 		.join(' ');
 }
 let componentMap: Record<string, InputComponentPublicFns> = $state({});
-export const onscroll = (e: HTMLElement) => {
+let awaitingAnimationFrame;
+
+function animationFrameWrapper(fn) {
+	let awaitingAnimationFrame = false;
+	return (...args) => {
+		if (awaitingAnimationFrame) return;
+		awaitingAnimationFrame = true;
+		requestAnimationFrame(() => {
+			fn(...args);
+			awaitingAnimationFrame = false;
+		});
+	};
+}
+let allIndexes: [null | HTMLElement, InputComponentPublicFns][] = $state([]);
+
+export const onscroll = animationFrameWrapper((e: HTMLElement) => {
 	const PADDING = 15;
 	const bound = e.getBoundingClientRect();
 	if (!bound) return;
 	const maxTop = bound.top + PADDING;
 	const maxBottom = bound.bottom - PADDING;
-	const allIndexes: [null | HTMLElement, InputComponentPublicFns][] = Object.values(
-		componentMap
-	).map((e) => [document.getElementById(e.elemId), e]);
-	allIndexes.forEach(([e, ref]) => {
+	allIndexes.forEach(([index, e, ref]) => {
 		const coords = e?.getBoundingClientRect();
 		if (!coords) return;
-		ref.hideTooltip(coords.top < maxTop || coords.bottom > maxBottom);
+		ref.hideTooltip(hidden[index] || coords.top < maxTop || coords.bottom > maxBottom);
 	});
-};
+});
 
 let scrollParent: null | HTMLElement = $state(null);
 function listenToScrollParent(element: HTMLElement): () => void {
@@ -444,11 +461,11 @@ function listenToScrollParent(element: HTMLElement): () => void {
 	};
 }
 
-$effect(()=>{
+$effect(() => {
 	globalKey;
-	const sp=untrack(()=>scrollParent)
-	sp && tick().then(()=>onscroll(sp))
-})
+	const sp = untrack(() => scrollParent);
+	sp && tick().then(() => onscroll(sp));
+});
 </script>
 
 <div

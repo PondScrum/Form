@@ -11,7 +11,7 @@ const onChange: OnChange = (values, inputInfo, methods) => {
 };
 
 let formData = $state();
-let valid:boolean = $state(false);
+let valid: boolean = $state(false);
 
 async function submit() {
 	setValidationLevel('high');
