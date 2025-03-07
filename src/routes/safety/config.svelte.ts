@@ -49,7 +49,7 @@ const textValidation = (required: boolean) => (value: string, focused: boolean) 
 
 const selectValidation = (value) => {
 	const valid = lowValidation || Boolean(value);
-	return { valid: valid, data: valid ? value : 'Must Select Value' };
+	return { valid: valid, data: valid ? value : 'Field is required' };
 };
 
 function movePointer(index) {

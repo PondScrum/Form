@@ -2,7 +2,7 @@
 import 'tippy.js/animations/scale-subtle.css';
 import 'tippy.js/dist/tippy.css';
 import Input from './Input.svelte';
-import { onMount, setContext, tick, type Component, type Snippet } from 'svelte';
+import { onMount, setContext, tick, untrack, type Component, type Snippet } from 'svelte';
 import { fade, scale, slide } from 'svelte/transition';
 import type {
 	Block,
@@ -420,6 +420,7 @@ export const onscroll = (e: HTMLElement) => {
 	});
 };
 
+let scrollParent: null | HTMLElement = $state(null);
 function listenToScrollParent(element: HTMLElement): () => void {
 	function getScrollParent(node: HTMLElement | null) {
 		if (node == null) {
@@ -432,7 +433,6 @@ function listenToScrollParent(element: HTMLElement): () => void {
 		}
 	}
 	const scrl = (e: MouseEvent) => e.target && onscroll(e.target as HTMLElement);
-	let scrollParent: null | HTMLElement = null;
 	tick().then(() =>
 		tick().then(() => {
 			scrollParent = getScrollParent(element.parentElement);
@@ -443,6 +443,12 @@ function listenToScrollParent(element: HTMLElement): () => void {
 		scrollParent?.removeEventListener('scroll', scrl);
 	};
 }
+
+$effect(()=>{
+	globalKey;
+	const sp=untrack(()=>scrollParent)
+	sp && tick().then(()=>onscroll(sp))
+})
 </script>
 
 <div
@@ -493,7 +499,7 @@ function listenToScrollParent(element: HTMLElement): () => void {
 				{@const { hide, alias, html } = props.label}
 				{#if !hide || alias}
 					<label
-						for={props.inputType}
+						for={props.id}
 						class={props.label.class || globalClasses.label + ` ${props.label.additionalClass}`}
 					>
 						{#if html}
