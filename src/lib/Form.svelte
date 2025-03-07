@@ -450,12 +450,8 @@ function listenToScrollParent(element: HTMLElement): () => void {
 		}
 	}
 	const scrl = (e: MouseEvent) => e.target && onscroll(e.target as HTMLElement);
-	tick().then(() =>
-		tick().then(() => {
-			scrollParent = getScrollParent(element.parentElement);
-			scrollParent?.addEventListener('scroll', scrl);
-		})
-	);
+	scrollParent=element.parentElement;
+	scrollParent?.addEventListener('scroll', scrl);
 	return () => {
 		scrollParent?.removeEventListener('scroll', scrl);
 	};
