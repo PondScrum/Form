@@ -181,41 +181,47 @@ const oninput: ChangeEventHandler<PossibleInputs> = (e) => {
 let tooltipShown = $state();
 const niceHTML = (c) => c && `<h1 class="text-base capitalize tracking-tight">${c}</h1>`;
 const wasLastTooltipShowing = () => $state.snapshot(untrack(() => tooltipShown));
-let tooltipParams = () => {
-	const res = {
-		id,
-		onShown: () => (tooltipShown = true),
-		disabled: onlyValue,
-		content: niceHTML(tooltipContent),
-		trigger: 'mouseenter click',
-		focused: isFocused,
-		placement: tooltipSide,
-		allowHTML: true,
-		delay: tooltipDelay,
-		duration: wasLastTooltipShowing() ? 0 : 75,
-		animation: 'scale-subtle',
-		inertia: false,
-		popperOptions: {
-			strategy: 'fixed',
-			modifiers: [
-				{
-					name: 'flip',
-					options: {
-						fallbackPlacements: ['bottom', 'right']
-					}
-				},
-				{
-					name: 'preventOverflow',
-					options: {
-						altAxis: true,
-						tether: false
-					}
+
+let hideTT = $state(false);
+export function hideTooltip(v) {
+	if (v === hideTT) return;
+	hideTT = v;
+}
+
+export const elemId = id;
+let tooltipParams = () => ({
+	id,
+	onShown: () => (tooltipShown = true),
+	disabled: onlyValue,
+	content: niceHTML(tooltipContent),
+	trigger: 'manual click',
+	hideTT,
+	focused: isFocused,
+	placement: tooltipSide,
+	allowHTML: true,
+	delay: tooltipDelay,
+	duration: wasLastTooltipShowing() ? 0 : 75,
+	animation: 'scale-subtle',
+	inertia: false,
+	popperOptions: {
+		strategy: 'fixed',
+		modifiers: [
+			{
+				name: 'flip',
+				options: {
+					fallbackPlacements: ['bottom', 'right']
 				}
-			]
-		}
-	};
-	return res;
-};
+			}
+			// {
+			// 	name: 'preventOverflow',
+			// 	options: {
+			// 		altAxis: true,
+			// 		tether: false
+			// 	}
+			// }
+		]
+	}
+});
 
 export const onblur = (e: FocusEvent) => {
 	tooltipShown = false;
@@ -272,6 +278,7 @@ let lastSelectVal = $state();
 		<!-- 	></Textarea> -->
 	{:else if inputType === 'textarea'}
 		<textarea
+			{disabled}
 			use:mounted
 			use:tooltip={tooltipParams}
 			{...events}

@@ -10,9 +10,8 @@ const onChange: OnChange = (values, inputInfo, methods) => {
 	formData = values;
 };
 
-let submitAttempted = $state(false);
 let formData = $state();
-let valid = $state();
+let valid:boolean = $state(false);
 
 async function submit() {
 	setValidationLevel('high');
@@ -36,9 +35,8 @@ let loading = $state(false);
 		<div {onscroll} class=" max-h-full overflow-auto p-4 pt-0">
 			<Form
 				deleteOnHide={true}
-				globalKey={getValidationChange()}
+				globalKey={getValidationChange().toString()}
 				classes={{
-					selected: 'bg-blue-500',
 					header: 'text-2xl tracking-tight border-b pb-1 mx-auto',
 					border: 'border-gray-500',
 					block: 'flex-wrap pr-4 pb-4 border-gray-100',

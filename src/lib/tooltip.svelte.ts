@@ -19,9 +19,10 @@ export type TooltipParams = {
 const niceHTML = (c) =>
 	c && `<h1 class="text-xs xl:text-lg capitalize py-1 tracking-tight">${c}</h1>`;
 export function tooltip(element: HTMLElement, getOptions: () => TooltipParams) {
+	console.log(element.id);
 	let showingTimeout;
 	let showing = false;
-
+	const tooltip = tippy(element, {});
 	const show = (t, delay) => {
 		if (!delay || showing) {
 			t.show();
@@ -34,7 +35,6 @@ export function tooltip(element: HTMLElement, getOptions: () => TooltipParams) {
 		}, delay[0]);
 	};
 	$effect(() => {
-		clearTimeout(showingTimeout);
 		showingTimeout = undefined;
 		const extraProps = ['disabled', 'focused', 'cursor', 'id', 'delay'];
 		const options = getOptions();
@@ -47,17 +47,22 @@ export function tooltip(element: HTMLElement, getOptions: () => TooltipParams) {
 		extraProps.forEach((e) => {
 			delete options[e as keyof TooltipParams];
 		});
-		const tooltip = tippy(element, options);
+		tooltip.setProps(options);
+		if (options.hideTT) {
+			tooltip.hide();
+			return;
+		}
 		if (disabled) tooltip.disable();
-		if (options.content) {
+		if (options.content && !focused) {
 			tooltip.enable();
-			if (focused && !showingTimeout) show(tooltip, delay);
+			show(tooltip, delay);
+			// if (focused && !showingTimeout) show(tooltip, delay);
 		} else {
 			showing = false;
 			tooltip.disable();
 		}
-		return tooltip.destroy;
 	});
+	return tooltip.destroy;
 }
 
 //---------- singleton ---------------//

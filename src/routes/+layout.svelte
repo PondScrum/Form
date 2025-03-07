@@ -219,7 +219,7 @@ $inspect(forms);
 
 {@render children()}
 
-{#if !children}
+{#if true || !children}
 	<div class="flex max-h-[100svh] flex-col">
 		<div class="flex h-52 max-h-52 overflow-hidden">
 			<div>
@@ -241,7 +241,6 @@ $inspect(forms);
 				{forms[0]}
 			</p>
 		</div>
-
 		<div
 			class="flex justify-center text-xl font-medium *:mx-1 *:rounded-sm *:border *:p-2 *:capitalize"
 		>

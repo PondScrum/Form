@@ -341,11 +341,12 @@ function inputChanged(
 		!RO && eventToRun && eventToRun(publicIndex, validationRes.data);
 		tick().then(() => {
 			render();
-			onChange(
-				provideAllValues(),
-				{ index, value: convertedResponse.value, focused },
-				{ setInternalValue, setDisabled }
-			);
+			!RO &&
+				onChange(
+					provideAllValues(),
+					{ index, value: convertedResponse.value, focused },
+					{ setInternalValue, setDisabled }
+				);
 			valid = determineValidity();
 		});
 
@@ -403,9 +404,52 @@ function indexToHeader(str: string) {
 		.join(' ');
 }
 let componentMap: Record<string, InputComponentPublicFns> = $state({});
+export const onscroll = (e: HTMLElement) => {
+	const PADDING = 15;
+	const bound = e.getBoundingClientRect();
+	if (!bound) return;
+	const maxTop = bound.top + PADDING;
+	const maxBottom = bound.bottom - PADDING;
+	const allIndexes: [null | HTMLElement, InputComponentPublicFns][] = Object.values(
+		componentMap
+	).map((e) => [document.getElementById(e.elemId), e]);
+	allIndexes.forEach(([e, ref]) => {
+		const coords = e?.getBoundingClientRect();
+		if (!coords) return;
+		ref.hideTooltip(coords.top < maxTop || coords.bottom > maxBottom);
+	});
+};
+
+function listenToScrollParent(element: HTMLElement): () => void {
+	function getScrollParent(node: HTMLElement | null) {
+		if (node == null) {
+			return null;
+		}
+		if (node.scrollHeight > node.clientHeight) {
+			return node;
+		} else {
+			return getScrollParent(node.parentElement);
+		}
+	}
+	const scrl = (e: MouseEvent) => e.target && onscroll(e.target as HTMLElement);
+	let scrollParent: null | HTMLElement = null;
+	tick().then(() =>
+		tick().then(() => {
+			scrollParent = getScrollParent(element.parentElement);
+			scrollParent?.addEventListener('scroll', scrl);
+		})
+	);
+	return () => {
+		scrollParent?.removeEventListener('scroll', scrl);
+	};
+}
 </script>
 
-<div class="relative h-min w-full" in:scale={{ duration: 100, opacity: 0.2, start: 0.98 }}>
+<div
+	use:listenToScrollParent
+	class="relative h-min w-full"
+	in:scale={{ duration: 100, opacity: 0.2, start: 0.98 }}
+>
 	<div class="">
 		{#key globalKey}
 			{@render handleArr(renderedComponents)}
