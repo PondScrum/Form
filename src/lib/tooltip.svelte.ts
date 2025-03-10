@@ -18,11 +18,31 @@ export type TooltipParams = {
 };
 const niceHTML = (c) =>
 	c && `<h1 class="text-xs xl:text-lg capitalize py-1 tracking-tight">${c}</h1>`;
+
+function handleOptions(options) {
+	const extraProps = ['disabled', 'focused', 'cursor', 'id', 'delay', 'hide'];
+	let rest = {};
+	if (options.allowHTML && options.content && options.content[0] !== '<') {
+		options.content = niceHTML(options.content);
+	}
+	options.hideOnClick = false;
+	extraProps.forEach((e) => {
+		rest[e] = options[e];
+		delete options[e as keyof TooltipParams];
+	});
+	return [options, rest];
+}
+
 export function tooltip(element: HTMLElement, getOptions: () => TooltipParams) {
 	let showingTimeout;
 	let showing = false;
-	const tooltip = tippy(element, {});
+	const op = getOptions();
+	const tooltip = tippy(element, op);
+	if (!op.content) {
+		tooltip.hide();
+	}
 	const show = (t, delay) => {
+		if (showingTimeout) return;
 		if (!delay || showing) {
 			t.show();
 			return;
@@ -34,31 +54,18 @@ export function tooltip(element: HTMLElement, getOptions: () => TooltipParams) {
 		}, delay[0]);
 	};
 	$effect(() => {
-		showingTimeout = undefined;
-		const extraProps = ['disabled', 'focused', 'cursor', 'id', 'delay'];
-		const options = getOptions();
-		const delay = options.delay?.slice();
-		const { disabled, focused } = options;
-		if (options.allowHTML && options.content && options.content[0] !== '<') {
-			options.content = niceHTML(options.content);
-		}
-		options.hideOnClick = false;
-		extraProps.forEach((e) => {
-			delete options[e as keyof TooltipParams];
-		});
-		tooltip.setProps(options);
-		if (options.hideTT) {
+		const [tippyOptions, { focused, disabled, hide, delay, id }] = handleOptions(getOptions());
+		tooltip.setProps(tippyOptions);
+		if (hide) {
 			tooltip.hide();
 			return;
 		}
 		if (disabled) tooltip.disable();
-		if (options.content && !focused) {
-			tooltip.enable();
+		if (tippyOptions.content && !focused && !hide) {
 			show(tooltip, delay);
-			// if (focused && !showingTimeout) show(tooltip, delay);
 		} else {
 			showing = false;
-			tooltip.disable();
+			tooltip.hide();
 		}
 	});
 	return { destroy: tooltip.destroy };
@@ -66,12 +73,6 @@ export function tooltip(element: HTMLElement, getOptions: () => TooltipParams) {
 
 //---------- singleton ---------------//
 //
-
-let singletonTooltips = {};
-
-type SingletonData = {
-	instance: Instance;
-};
 
 let singletonTracker = {};
 function createNewInstance(items, options, onHidden) {

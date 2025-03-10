@@ -294,9 +294,7 @@ const barebonesEX = ({Text},values)=>{
 								bind:valid={valid[i]}
 								onChange={wrapOnChange(i)}
 								getRenderedItems={(...args) => getRenderedItems(i, ...args)}
-								events={{
-									hide: (i) => console.log(i)
-								}}
+								events={{}}
 							></Form>
 						</div>
 					{/if}

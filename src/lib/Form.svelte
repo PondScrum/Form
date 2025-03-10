@@ -424,34 +424,49 @@ function animationFrameWrapper(fn) {
 }
 let allIndexes: [null | HTMLElement, InputComponentPublicFns][] = $state([]);
 
-export const onscroll = animationFrameWrapper((e: HTMLElement) => {
-	const PADDING = 15;
-	const bound = e.getBoundingClientRect();
-	if (!bound) return;
-	const maxTop = bound.top + PADDING;
-	const maxBottom = bound.bottom - PADDING;
-	allIndexes.forEach(([index, e, ref]) => {
-		const coords = e?.getBoundingClientRect();
-		if (!coords) return;
-		ref.hideTooltip(hidden[index] || coords.top < maxTop || coords.bottom > maxBottom);
-	});
-});
+function oncePerTickWrapper(fn) {
+	let queued = false;
+	return (...args) => {
+		if (queued) return;
+		tick().then(() => {
+			fn(...args);
+			queued = false;
+		});
+		queued = true;
+	};
+}
+
+export const onscroll = oncePerTickWrapper(
+	animationFrameWrapper((e: HTMLElement) => {
+		const PADDING = 15;
+		const bound = e.getBoundingClientRect();
+		if (!bound) return;
+		const maxTop = bound.top + PADDING;
+		const maxBottom = bound.bottom - PADDING;
+		allIndexes.forEach(([index, e, ref]) => {
+			const coords = e?.getBoundingClientRect();
+			if (!coords) {
+				return;
+			}
+			ref.hideTooltip(hidden[index] || coords.top <= maxTop || coords.bottom >= maxBottom);
+		});
+	})
+);
 
 let scrollParent: null | HTMLElement = $state(null);
 function listenToScrollParent(element: HTMLElement): () => void {
 	function getScrollParent(node: HTMLElement | null) {
-		if (node == null) {
-			return null;
-		}
-		if (node.scrollHeight > node.clientHeight) {
-			return node;
-		} else {
-			return getScrollParent(node.parentElement);
-		}
+		if (!node) return null;
+		if (node.scrollHeight > node.clientHeight) return node;
+		return getScrollParent(node.parentElement);
 	}
-	const scrl = (e: MouseEvent) => e.target && onscroll(e.target as HTMLElement);
-	scrollParent=element.parentElement?.parentElement;
-	scrollParent?.addEventListener('scroll', scrl);
+	tick()
+		.then(tick)
+		.then(() => {
+			const scrl = (e: MouseEvent) => e.target && onscroll(e.target as HTMLElement);
+			scrollParent = getScrollParent(element);
+			scrollParent?.addEventListener('scroll', scrl);
+		});
 	return () => {
 		scrollParent?.removeEventListener('scroll', scrl);
 	};
@@ -461,6 +476,7 @@ $effect(() => {
 	globalKey;
 	const sp = untrack(() => scrollParent);
 	sp && tick().then(() => onscroll(sp));
+	console.log(sp);
 });
 </script>
 

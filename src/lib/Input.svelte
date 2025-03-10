@@ -184,19 +184,24 @@ const wasLastTooltipShowing = () => $state.snapshot(untrack(() => tooltipShown))
 
 let hideTT = $state(false);
 export function hideTooltip(v) {
-	if (v === hideTT) return;
 	hideTT = v;
+	if (!v && tooltipContent) {
+		tippy.show();
+	}
 	v && (tooltipShown = false);
 }
 
 export const elemId = id;
+let tippy = $state();
 let tooltipParams = () => ({
 	id,
-	onShown: () => (tooltipShown = true),
+	onCreate: (e) => {
+		tippy = e;
+	},
 	disabled: onlyValue,
 	content: niceHTML(tooltipContent),
 	trigger: 'manual',
-	hideTT,
+	hide: hideTT,
 	focused: isFocused,
 	placement: tooltipSide,
 	allowHTML: true,
