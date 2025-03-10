@@ -107,7 +107,7 @@ const getRenderedItems: GetRendered = (
 		label: {
 			alias: 'IF'
 		},
-		key: 'colcmp'
+		key: 'cmp'
 	});
 
 	const valueString = `If ${values.col} ${cmpDisplayMap[values.colcmp]} `;
@@ -133,6 +133,7 @@ const getRenderedItems: GetRendered = (
 						Match(
 							['lt', 'gt'],
 							Boolean('or_equal_to', defValidate, {
+								deleteOnEmpty: true,
 								input: {
 									class: 'mx-auto mb-auto'
 								},
@@ -285,10 +286,10 @@ const barebonesEX = ({Text},values)=>{
 							<Form
 								deleteOnHide={true}
 								classes={{
-									input: 'bg-orange-500',
+									input: 'rounded px-1',
 									label: 'w-auto pr-2 h-min my-auto font-bold text-lg',
 									invalid: 'bg-red-700/80 text-white',
-									block: 'min-h-22',
+									block: 'mt-1',
 									border: 'border-gray-500'
 								}}
 								bind:valid={valid[i]}

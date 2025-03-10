@@ -252,7 +252,7 @@ function setup() {
 
 onMount(() => {
 	setup();
-	tick().then(render);
+	render();
 });
 
 function collectBlocks(obj: BlockSpec | GroupSpec): BlockSpec[] {
@@ -325,12 +325,7 @@ function inputChanged(
 		index = index.toLowerCase();
 		if (props.key && value !== allValues[index]) {
 			//			this will def not work in cases of validation fn's returning override values
-			tick().then(() =>
-				tick().then(() => {
-					forceRerender[props.key] ??= true;
-					forceRerender[props.key] = !forceRerender[props.key];
-				})
-			);
+			globalKey = crypto.randomUUID();
 		}
 		if (!RO) {
 			validationRes = validate(value, focused);
@@ -344,16 +339,14 @@ function inputChanged(
 		//allValues[originalIndex]=convertedResponse.value;
 		const eventToRun = events[validationRes.valid ? 'valid' : 'error'];
 		!RO && eventToRun && eventToRun(publicIndex, validationRes.data);
-		tick().then(() => {
-			render();
-			!RO &&
-				onChange(
-					provideAllValues(),
-					{ index, value: convertedResponse.value, focused },
-					{ setInternalValue, setDisabled }
-				);
-			valid = determineValidity();
-		});
+		render();
+		!RO &&
+			onChange(
+				provideAllValues(),
+				{ index, value: convertedResponse.value, focused },
+				{ setInternalValue, setDisabled }
+			);
+		valid = determineValidity();
 
 		return handleValidationResponse(validationRes, value);
 	} catch (e) {
@@ -460,13 +453,11 @@ function listenToScrollParent(element: HTMLElement): () => void {
 		if (node.scrollHeight > node.clientHeight) return node;
 		return getScrollParent(node.parentElement);
 	}
-	tick()
-		.then(tick)
-		.then(() => {
-			const scrl = (e: MouseEvent) => e.target && onscroll(e.target as HTMLElement);
-			scrollParent = getScrollParent(element);
-			scrollParent?.addEventListener('scroll', scrl);
-		});
+	tick().then(() => {
+		const scrl = (e: MouseEvent) => e.target && onscroll(e.target as HTMLElement);
+		scrollParent = getScrollParent(element);
+		scrollParent?.addEventListener('scroll', scrl);
+	});
 	return () => {
 		scrollParent?.removeEventListener('scroll', scrl);
 	};
