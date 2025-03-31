@@ -81,6 +81,7 @@ export type OptionInput = (
 export type ProvidedComponents = {
 	Time: StandardInput;
 	Text: StandardInput;
+	File: StandardInput;
 	Select: OptionInput;
 	Date: StandardInput;
 	TextArea: StandardInput;

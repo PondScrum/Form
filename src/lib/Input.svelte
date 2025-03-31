@@ -242,6 +242,9 @@ const onmouseleave = () => {
 
 let focusedFromOutside = $state(false);
 let lastSelectVal = $state();
+let files = $state(inputType === 'file' ? initialValue : []);
+let fileRef = $state();
+let loading = $state(false);
 </script>
 
 {#if events}
@@ -367,6 +370,60 @@ let lastSelectVal = $state();
 						{/key}
 					</button>
 				{/each}
+			</div>
+		</div>
+	{:else if inputType === 'file'}
+		<div class="relative h-8 p-2">
+			<span class="pointer-events-none absolute top-0 z-10 h-full w-full overflow-hidden">
+				<div class="flex max-w-full overflow-hidden">
+					<span class="mr-4 border-r pr-4 font-semibold text-nowrap text-blue-400 underline">
+						{loading ? 'Loading...' : 'Upload'}
+					</span>
+					<div class=" pointer-events-auto grow overflow-hidden">
+						<div class="max-w-full overflow-auto">
+							{#each files as file}
+								<span
+									class="mx-1 my-auto h-min rounded border border-blue-200 bg-blue-100 px-1 text-sm font-light text-nowrap"
+								>
+									{file.name}
+								</span>
+							{/each}
+						</div>
+					</div>
+				</div>
+			</span>
+			<div class="absolute top-0 opacity-0">
+				<!-- 	<input bind:this={fileRef} class={{ ['w-full  top-0  h-full']: true }} -->
+				<!-- multiple={true} name='zz' onchange={e=>{files=e.target.files.map(e=>({name:e.name,data:};console.log(JSON.stringify(files));}} type="file"> -->
+				<input
+					bind:this={fileRef}
+					class={{ ['top-0  h-full  w-full']: true }}
+					multiple={true}
+					name="zz"
+					onchange={async (e) => {
+						if (loading) return;
+						loading = true;
+						function getb64(file) {
+							return new Promise((r) => {
+								const reader = new FileReader();
+								let res;
+								reader.onload = (e) =>
+									r({
+										name: file.name,
+										data: e.target.result
+									});
+								reader.readAsDataURL(file);
+							});
+						}
+						files = await Promise.all(
+							Object.values(e.target.files).map(async (e) => await getb64(e))
+						);
+						valueChanged(files);
+						loading = false;
+						console.log(files);
+					}}
+					type="file"
+				/>
 			</div>
 		</div>
 	{:else if readonly}
