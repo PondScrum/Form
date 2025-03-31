@@ -134,9 +134,14 @@ onMount(() => {
 });
 
 function mounted(elem: PossibleInputs, customFN = null) {
+	console.log(elem);
 	if (mount) mount(setValue);
 	if (inputType === 'inlineselect') {
 		lastSelectVal = initialValue;
+	}
+	if (inputType === 'file') {
+		handleFiles(initialValue || [], true);
+		return;
 	}
 	if (onlyValue) {
 		handleResult(initialValue, elem);
@@ -242,9 +247,36 @@ const onmouseleave = () => {
 
 let focusedFromOutside = $state(false);
 let lastSelectVal = $state();
-let files = $state(inputType === 'file' ? initialValue : []);
+let files = $state([]);
 let fileRef = $state();
 let loading = $state(false);
+
+function removeFile(name) {
+	handleFiles(
+		files.filter((e) => !(e.name === name)),
+		true
+	);
+}
+function handleFiles(newsestFiles, replace = false) {
+	if (!Array.isArray(newsestFiles)) {
+		console.trace();
+		throw new Error('a');
+	}
+	fileRef.value = '';
+	let res;
+	if (replace) {
+		files = newsestFiles;
+		res = valueChanged(files.slice());
+	} else {
+		const newNames = newsestFiles.map((e) => e.name);
+		files = (files || []).filter((e) => !newNames.includes(e.name));
+		files = [...files, ...newsestFiles];
+		res = valueChanged(files.slice(), false);
+	}
+	console.log(res, 'a');
+	resultBackgroundColor = res.background_color;
+	tooltipContent = res.tooltip;
+}
 </script>
 
 {#if events}
@@ -373,57 +405,92 @@ let loading = $state(false);
 			</div>
 		</div>
 	{:else if inputType === 'file'}
-		<div class="relative h-8 p-2">
-			<span class="pointer-events-none absolute top-0 z-10 h-full w-full overflow-hidden">
-				<div class="flex max-w-full overflow-hidden">
-					<span class="mr-4 border-r pr-4 font-semibold text-nowrap text-blue-400 underline">
-						{loading ? 'Loading...' : 'Upload'}
-					</span>
-					<div class=" pointer-events-auto grow overflow-hidden">
-						<div class="max-w-full overflow-auto">
-							{#each files as file}
-								<span
-									class="mx-1 my-auto h-min rounded border border-blue-200 bg-blue-100 px-1 text-sm font-light text-nowrap"
-								>
-									{file.name}
-								</span>
-							{/each}
+		<div use:mounted class="relative h-24 grow">
+			<span class="absolute top-0 z-10 h-full w-full overflow-hidden">
+				<div class="flex h-full max-w-full overflow-hidden">
+					<div
+						class="flex-col {loading &&
+							'animate-pulse'} flex h-full w-min justify-between py-1 text-nowrap"
+					>
+						<div class="relative flex">
+							<span
+								use:tooltip={tooltipParams}
+								class=" h-min w-full rounded border border-blue-400 bg-blue-500 px-1 text-center font-semibold text-nowrap text-white"
+							>
+								Upload
+								<!-- {loading ? 'Loading...' : 'Upload'} -->
+							</span>
+							<div class="absolute top-0 z-10 h-full w-full opacity-0">
+								<input
+									bind:this={fileRef}
+									class={{ ['top-0  h-full  w-full']: true }}
+									multiple={true}
+									onchange={async (e) => {
+										if (loading) return;
+										loading = true;
+										function getb64(file) {
+											return new Promise((r) => {
+												const reader = new FileReader();
+												let res;
+												reader.onload = (e) =>
+													r({
+														name: file.name,
+														data: e.target.result
+													});
+												reader.readAsDataURL(file);
+											});
+										}
+										const res = await Promise.all(
+											Object.values(e.target.files).map((e) => getb64(e))
+										);
+										handleFiles(res);
+										loading = false;
+										console.log(files);
+									}}
+									type="file"
+								/>
+							</div>
+						</div>
+						<span
+							onclick={() => !loading && handleFiles([], true)}
+							class="h-min rounded border border-red-500 bg-red-500 px-1 text-center font-semibold text-nowrap text-white"
+						>
+							Clear All
+						</span>
+					</div>
+					<div class="grow overflow-hidden px-2">
+						<div
+							class="flex max-h-full min-h-full w-auto max-w-full min-w-[75%] flex-col overflow-auto border-y border-gray-300"
+						>
+							{#if loading && files?.length === 0}
+								<span class="w-full text-center"> Loading... </span>
+							{/if}
+							<div class="max-w-full overflow-x-hidden">
+								{#each files as file}
+									<div class="mr-2 flex w-full justify-between py-1">
+										<span
+											class="mx-1 my-auto h-min min-w-24 rounded border border-blue-200 bg-blue-100 px-1 font-light text-nowrap"
+										>
+											{file.name}
+										</span>
+										<span
+											role="button"
+											onclick={() => {
+												if (loading) return;
+												removeFile(file.name);
+											}}
+											class="mx-1 my-auto h-min cursor-pointer font-bold text-red-500">x</span
+										>
+									</div>
+								{/each}
+							</div>
 						</div>
 					</div>
 				</div>
 			</span>
-			<div class="absolute top-0 opacity-0">
+			<div class="absolute top-0 h-full opacity-0">
 				<!-- 	<input bind:this={fileRef} class={{ ['w-full  top-0  h-full']: true }} -->
 				<!-- multiple={true} name='zz' onchange={e=>{files=e.target.files.map(e=>({name:e.name,data:};console.log(JSON.stringify(files));}} type="file"> -->
-				<input
-					bind:this={fileRef}
-					class={{ ['top-0  h-full  w-full']: true }}
-					multiple={true}
-					name="zz"
-					onchange={async (e) => {
-						if (loading) return;
-						loading = true;
-						function getb64(file) {
-							return new Promise((r) => {
-								const reader = new FileReader();
-								let res;
-								reader.onload = (e) =>
-									r({
-										name: file.name,
-										data: e.target.result
-									});
-								reader.readAsDataURL(file);
-							});
-						}
-						files = await Promise.all(
-							Object.values(e.target.files).map(async (e) => await getb64(e))
-						);
-						valueChanged(files);
-						loading = false;
-						console.log(files);
-					}}
-					type="file"
-				/>
 			</div>
 		</div>
 	{:else if readonly}
