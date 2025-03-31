@@ -214,8 +214,6 @@ let forms = $state(['a', getRenderedItems]);
 let formVals = $state({});
 
 let values = $state({});
-
-$inspect(forms);
 </script>
 
 {@render children()}

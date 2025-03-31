@@ -94,6 +94,10 @@ export function setValue(value: string) {
 	if (inputType.split('_')[0] === 'inlineselect') {
 		lastSelectVal = value;
 	}
+	if (inputType === 'file') {
+		handleFiles(value, true);
+		return;
+	}
 	handleResult(valueChanged(value, false), document.getElementById(id) as PossibleInputs);
 }
 export function focus() {
@@ -208,7 +212,7 @@ let tooltipParams = () => ({
 	trigger: 'manual',
 	hide: hideTT,
 	focused: isFocused,
-	placement: tooltipSide,
+	placement: input.tooltipSide || tooltipSide,
 	allowHTML: true,
 	delay: tooltipDelay,
 	duration: [wasLastTooltipShowing() ? 0 : 75, 0],
@@ -223,13 +227,6 @@ let tooltipParams = () => ({
 					fallbackPlacements: ['bottom', 'right']
 				}
 			}
-			// {
-			// 	name: 'preventOverflow',
-			// 	options: {
-			// 		altAxis: true,
-			// 		tether: false
-			// 	}
-			// }
 		]
 	}
 });
@@ -424,7 +421,7 @@ function handleFiles(newsestFiles, replace = false) {
 								<input
 									bind:this={fileRef}
 									class={{ ['top-0  h-full  w-full']: true }}
-									multiple={true}
+									{...input?.elementAttributes || {}}
 									onchange={async (e) => {
 										if (loading) return;
 										loading = true;
@@ -467,7 +464,7 @@ function handleFiles(newsestFiles, replace = false) {
 							{/if}
 							<div class="max-w-full overflow-x-hidden">
 								{#each files as file}
-									<div class="mr-2 flex w-full justify-between py-1">
+									<div id="file-item" class="mr-2 flex w-full justify-between py-1">
 										<span
 											class="mx-1 my-auto h-min min-w-24 rounded border border-blue-200 bg-blue-100 px-1 font-light text-nowrap"
 										>
